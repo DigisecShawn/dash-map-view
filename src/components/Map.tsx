@@ -1,5 +1,5 @@
 import { APIProvider, Map as GoogleMap, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
-import { MapPin } from 'lucide-react';
+import { Video } from 'lucide-react';
 
 interface Device {
   id: string;
@@ -25,7 +25,7 @@ const Map = ({ devices, selectedDevice, onDeviceSelect, apiKey }: MapProps) => {
     return (
       <div className="relative w-full h-full bg-secondary rounded-lg overflow-hidden flex items-center justify-center">
         <div className="text-center p-8">
-          <MapPin className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-foreground mb-2">需要 Google Maps API Key</h3>
           <p className="text-muted-foreground text-sm">
             請在下方輸入您的 Google Maps API Key
@@ -73,12 +73,17 @@ const Map = ({ devices, selectedDevice, onDeviceSelect, apiKey }: MapProps) => {
                   <div className="absolute inset-0 rounded-full bg-primary/30 blur-xl" />
                   
                   {/* Main marker */}
-                  <div className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 border-4 ${
+                  <div className={`relative w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 border-4 ${
                     selectedDevice === device.id 
                       ? 'bg-primary border-primary shadow-glow' 
                       : 'bg-gradient-primary border-primary/80 shadow-lg group-hover:border-primary'
                   }`}>
-                    <MapPin className="w-8 h-8 text-white drop-shadow-lg" fill="white" strokeWidth={1.5} />
+                    {/* Camera icon with recording indicator */}
+                    <div className="relative">
+                      <Video className="w-8 h-8 text-white drop-shadow-lg" fill="white" strokeWidth={1.5} />
+                      {/* Recording red dot */}
+                      <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border border-white animate-pulse" />
+                    </div>
                   </div>
 
                   {/* Status indicator dot */}
