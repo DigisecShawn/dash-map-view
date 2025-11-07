@@ -11,6 +11,7 @@ interface Device {
   signal: number;
   status: 'online' | 'offline';
   location: string;
+  cctvImage: string;
 }
 
 interface DeviceDetailsProps {
@@ -124,27 +125,33 @@ const DeviceDetails = ({ device, onClose }: DeviceDetailsProps) => {
                 </div>
               </div>
             </div>
-            <div className="aspect-video bg-background relative">
-              {/* Simulated video feed */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">模擬即時畫面</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    GPS: {device.lat.toFixed(4)}°, {device.lng.toFixed(4)}°
-                  </p>
-                </div>
-              </div>
+            <div className="aspect-video bg-background relative overflow-hidden">
+              {/* CCTV Feed */}
+              <img 
+                src={device.cctvImage} 
+                alt={`${device.name} CCTV`}
+                className="w-full h-full object-cover"
+              />
               
               {/* Video overlay info */}
               <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
-                <div className="bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg">
+                <div className="bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-border">
                   <div className="text-xs text-muted-foreground">設備 ID</div>
                   <div className="text-sm font-mono font-semibold">{device.id}</div>
                 </div>
-                <div className="bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg">
-                  <div className="text-xs text-muted-foreground">FPS</div>
-                  <div className="text-sm font-semibold">30</div>
+                <div className="bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-border">
+                  <div className="text-xs text-muted-foreground">狀態</div>
+                  <div className="text-sm font-semibold text-success">運行中</div>
+                </div>
+              </div>
+
+              {/* Bottom overlay */}
+              <div className="absolute bottom-4 left-4 right-4">
+                <div className="bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-border">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">GPS: {device.lat.toFixed(4)}°N, {device.lng.toFixed(4)}°E</span>
+                    <span className="text-muted-foreground">{device.location}</span>
+                  </div>
                 </div>
               </div>
             </div>

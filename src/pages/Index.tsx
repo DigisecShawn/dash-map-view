@@ -7,6 +7,11 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import cctvNeihu from '@/assets/cctv-neihu.jpg';
+import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
+import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
+import cctvXindian from '@/assets/cctv-xindian.jpg';
+import cctvSongshan from '@/assets/cctv-songshan.jpg';
 
 // Mock data for devices - 使用台灣真實座標
 const mockDevices = [
@@ -19,6 +24,7 @@ const mockDevices = [
     signal: 92,
     status: 'online' as const,
     location: '台北市內湖區',
+    cctvImage: cctvNeihu,
   },
   {
     id: 'CAM-002',
@@ -29,6 +35,7 @@ const mockDevices = [
     signal: 78,
     status: 'online' as const,
     location: '新北市新莊區',
+    cctvImage: cctvXinzhuang,
   },
   {
     id: 'CAM-003',
@@ -39,6 +46,7 @@ const mockDevices = [
     signal: 65,
     status: 'online' as const,
     location: '新北市板橋區',
+    cctvImage: cctvBanqiao,
   },
   {
     id: 'CAM-004',
@@ -49,6 +57,7 @@ const mockDevices = [
     signal: 45,
     status: 'offline' as const,
     location: '新北市新店區',
+    cctvImage: cctvXindian,
   },
   {
     id: 'CAM-005',
@@ -59,6 +68,7 @@ const mockDevices = [
     signal: 88,
     status: 'online' as const,
     location: '台北市松山區',
+    cctvImage: cctvSongshan,
   },
 ];
 
