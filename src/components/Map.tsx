@@ -53,27 +53,44 @@ const Map = ({ devices, selectedDevice, onDeviceSelect, apiKey }: MapProps) => {
               className="cursor-pointer"
             >
               <div className="relative group">
-                {/* Pulse effect for selected device */}
+                {/* Outer pulse ring - always visible */}
+                <div className="absolute -inset-4 animate-pulse">
+                  <div className="w-20 h-20 rounded-full bg-primary/20" />
+                </div>
+                
+                {/* Selected pulse effect */}
                 {selectedDevice === device.id && (
-                  <div className="absolute -inset-2 animate-ping">
-                    <div className="w-14 h-14 rounded-full bg-primary opacity-75" />
+                  <div className="absolute -inset-3 animate-ping">
+                    <div className="w-[4.5rem] h-[4.5rem] rounded-full bg-primary opacity-60" />
                   </div>
                 )}
                 
-                {/* Marker */}
-                <div className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${
-                  selectedDevice === device.id 
-                    ? 'bg-gradient-primary shadow-glow scale-125' 
-                    : 'bg-card group-hover:bg-gradient-primary'
+                {/* Marker container with glow */}
+                <div className={`relative transition-all duration-300 ${
+                  selectedDevice === device.id ? 'scale-125' : 'scale-100 group-hover:scale-110'
                 }`}>
-                  <MapPin className="w-6 h-6 text-foreground" />
+                  {/* Background glow */}
+                  <div className="absolute inset-0 rounded-full bg-primary/30 blur-xl" />
+                  
+                  {/* Main marker */}
+                  <div className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 border-4 ${
+                    selectedDevice === device.id 
+                      ? 'bg-primary border-primary shadow-glow' 
+                      : 'bg-gradient-primary border-primary/80 shadow-lg group-hover:border-primary'
+                  }`}>
+                    <MapPin className="w-8 h-8 text-white drop-shadow-lg" fill="white" strokeWidth={1.5} />
+                  </div>
+
+                  {/* Status indicator dot */}
+                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-success border-2 border-white shadow-lg animate-pulse" />
                 </div>
 
                 {/* Device label */}
-                <div className={`absolute top-full mt-2 left-1/2 transform -translate-x-1/2 whitespace-nowrap px-3 py-1.5 rounded-lg bg-card shadow-card text-xs font-medium transition-opacity duration-300 ${
-                  selectedDevice === device.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                <div className={`absolute top-full mt-3 left-1/2 transform -translate-x-1/2 whitespace-nowrap px-3 py-2 rounded-lg bg-card/95 backdrop-blur-sm shadow-glow border border-primary/30 text-sm font-semibold transition-all duration-300 ${
+                  selectedDevice === device.id ? 'opacity-100 scale-100' : 'opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100'
                 }`}>
-                  {device.name}
+                  <div className="text-foreground">{device.name}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{device.id}</div>
                 </div>
               </div>
             </AdvancedMarker>
