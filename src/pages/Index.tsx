@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { Monitor, Search } from 'lucide-react';
+import { Monitor, Search, Key } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
-// Mock data for devices
+// Mock data for devices - 使用台灣真實座標
 const mockDevices = [
   {
     id: 'CAM-001',
     name: '監視器 A',
-    lat: 35,
-    lng: 45,
+    lat: 25.0330,
+    lng: 121.5654,
     battery: 85,
     signal: 92,
     status: 'online' as const,
@@ -20,42 +22,42 @@ const mockDevices = [
   {
     id: 'CAM-002',
     name: '監視器 B',
-    lat: 55,
-    lng: 65,
+    lat: 25.0478,
+    lng: 121.5318,
     battery: 45,
     signal: 78,
     status: 'online' as const,
-    location: '新北市板橋區',
+    location: '台北市中正區',
   },
   {
     id: 'CAM-003',
     name: '監視器 C',
-    lat: 65,
-    lng: 30,
+    lat: 25.0175,
+    lng: 121.4627,
     battery: 92,
     signal: 65,
     status: 'online' as const,
-    location: '桃園市中壢區',
+    location: '新北市板橋區',
   },
   {
     id: 'CAM-004',
     name: '監視器 D',
-    lat: 40,
-    lng: 70,
+    lat: 24.9917,
+    lng: 121.5417,
     battery: 28,
     signal: 45,
     status: 'offline' as const,
-    location: '台中市西屯區',
+    location: '台北市文山區',
   },
   {
     id: 'CAM-005',
     name: '監視器 E',
-    lat: 50,
-    lng: 40,
+    lat: 25.0853,
+    lng: 121.5606,
     battery: 67,
     signal: 88,
     status: 'online' as const,
-    location: '高雄市前鎮區',
+    location: '台北市士林區',
   },
 ];
 
@@ -63,6 +65,9 @@ const Index = () => {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetails, setShowDetails] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [tempApiKey, setTempApiKey] = useState('');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
 
   const selectedDeviceData = mockDevices.find(d => d.id === selectedDevice) || null;
 
@@ -78,6 +83,11 @@ const Index = () => {
   const handleDeviceClick = (deviceId: string) => {
     setSelectedDevice(deviceId);
     setShowDetails(true);
+  };
+
+  const handleApiKeySubmit = () => {
+    setApiKey(tempApiKey);
+    setShowApiKeyInput(false);
   };
 
   return (
@@ -96,6 +106,17 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {apiKey && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowApiKeyInput(true)}
+                  className="gap-2"
+                >
+                  <Key className="w-4 h-4" />
+                  更改 API Key
+                </Button>
+              )}
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">在線設備</div>
                 <div className="text-xl font-bold text-success">
@@ -106,6 +127,58 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* API Key Input Modal */}
+      {showApiKeyInput && !apiKey && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-md p-6 bg-card shadow-glow">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+                <Key className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Google Maps API Key</h2>
+                <p className="text-sm text-muted-foreground">需要 API Key 來顯示地圖</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  請輸入您的 Google Maps API Key
+                </label>
+                <Input
+                  type="text"
+                  placeholder="AIzaSy..."
+                  value={tempApiKey}
+                  onChange={(e) => setTempApiKey(e.target.value)}
+                  className="bg-secondary border-border"
+                />
+              </div>
+
+              <div className="bg-secondary p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-2">
+                  <strong>如何取得 API Key：</strong>
+                </p>
+                <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>前往 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a></li>
+                  <li>建立專案並啟用 Maps JavaScript API</li>
+                  <li>在「憑證」頁面建立 API 金鑰</li>
+                  <li>複製 API 金鑰並貼上於此</li>
+                </ol>
+              </div>
+
+              <Button
+                onClick={handleApiKeySubmit}
+                disabled={!tempApiKey.trim()}
+                className="w-full bg-gradient-primary hover:opacity-90"
+              >
+                確認
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <div className="flex h-[calc(100vh-89px)]">
         {/* Sidebar */}
@@ -141,6 +214,7 @@ const Index = () => {
               devices={mockDevices}
               selectedDevice={selectedDevice}
               onDeviceSelect={handleDeviceSelect}
+              apiKey={apiKey}
             />
           </div>
 
