@@ -44,33 +44,6 @@ const Map = ({ devices, selectedDevice, onDeviceSelect, apiKey }: MapProps) => {
           mapId="monitoring-dashboard"
           disableDefaultUI={false}
           className="w-full h-full"
-          styles={[
-            {
-              featureType: "all",
-              elementType: "geometry",
-              stylers: [{ color: "#1e293b" }]
-            },
-            {
-              featureType: "all",
-              elementType: "labels.text.fill",
-              stylers: [{ color: "#94a3b8" }]
-            },
-            {
-              featureType: "all",
-              elementType: "labels.text.stroke",
-              stylers: [{ color: "#0f172a" }]
-            },
-            {
-              featureType: "water",
-              elementType: "geometry",
-              stylers: [{ color: "#0c4a6e" }]
-            },
-            {
-              featureType: "road",
-              elementType: "geometry",
-              stylers: [{ color: "#334155" }]
-            }
-          ]}
         >
           {devices.map((device) => (
             <AdvancedMarker

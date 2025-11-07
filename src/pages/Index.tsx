@@ -3,6 +3,7 @@ import { Monitor, Search, Key } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
+import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -106,6 +107,7 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <ThemeToggle />
               {apiKey && (
                 <Button
                   variant="outline"
