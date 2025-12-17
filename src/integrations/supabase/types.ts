@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      notification_logs: {
+        Row: {
+          channel: string
+          created_at: string
+          device_id: string | null
+          device_name: string | null
+          error_message: string | null
+          id: string
+          message: string | null
+          screenshot_url: string | null
+          status: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          device_id?: string | null
+          device_name?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string | null
+          screenshot_url?: string | null
+          status?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          device_id?: string | null
+          device_name?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string | null
+          screenshot_url?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      notification_settings: {
+        Row: {
+          channel: string
+          config: Json
+          created_at: string
+          enabled: boolean
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
