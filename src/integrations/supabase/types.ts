@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      device_sensor_history: {
+        Row: {
+          battery: number | null
+          created_at: string
+          device_id: string
+          id: string
+          pm25: number | null
+          recorded_at: string
+          signal_strength: number | null
+          temperature: number | null
+        }
+        Insert: {
+          battery?: number | null
+          created_at?: string
+          device_id: string
+          id?: string
+          pm25?: number | null
+          recorded_at?: string
+          signal_strength?: number | null
+          temperature?: number | null
+        }
+        Update: {
+          battery?: number | null
+          created_at?: string
+          device_id?: string
+          id?: string
+          pm25?: number | null
+          recorded_at?: string
+          signal_strength?: number | null
+          temperature?: number | null
+        }
+        Relationships: []
+      }
       notification_logs: {
         Row: {
           channel: string
