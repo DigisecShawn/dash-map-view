@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Monitor, Search, Key } from 'lucide-react';
+import { Monitor, Search, Key, Bell } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
+import NotificationSettings from '@/components/NotificationSettings';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,7 @@ const Index = () => {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetails, setShowDetails] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [tempApiKey, setTempApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
@@ -118,6 +120,15 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNotificationSettings(true)}
+                className="gap-2"
+              >
+                <Bell className="w-4 h-4" />
+                通知設定
+              </Button>
               {apiKey && (
                 <Button
                   variant="outline"
@@ -235,6 +246,13 @@ const Index = () => {
             <DeviceDetails
               device={selectedDeviceData}
               onClose={() => setShowDetails(false)}
+            />
+          )}
+
+          {/* Notification Settings Modal */}
+          {showNotificationSettings && (
+            <NotificationSettings
+              onClose={() => setShowNotificationSettings(false)}
             />
           )}
         </main>
