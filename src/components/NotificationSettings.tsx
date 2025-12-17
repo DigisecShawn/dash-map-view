@@ -254,29 +254,29 @@ const NotificationSettings = ({ onClose }: NotificationSettingsProps) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-card shadow-glow">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <Bell className="w-5 h-5 text-white" />
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+      <Card className="w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto bg-card shadow-glow">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-border px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <CardTitle className="text-xl">通知平台設定</CardTitle>
+            <CardTitle className="text-base sm:text-xl">通知平台設定</CardTitle>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 sm:h-9 sm:w-9">
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </CardHeader>
 
-        <CardContent className="p-6">
+        <CardContent className="p-3 sm:p-6">
           {/* Screenshot Settings */}
-          <div className="mb-6 p-4 bg-secondary rounded-lg space-y-4">
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-secondary rounded-lg space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Camera className="w-5 h-5 text-primary" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 <div>
-                  <p className="font-medium text-foreground">包含 CCTV 截圖</p>
-                  <p className="text-sm text-muted-foreground">異常通知時夾帶設備監控截圖</p>
+                  <p className="font-medium text-sm sm:text-base text-foreground">包含 CCTV 截圖</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">異常通知時夾帶設備監控截圖</p>
                 </div>
               </div>
               <Switch
@@ -288,9 +288,9 @@ const NotificationSettings = ({ onClose }: NotificationSettingsProps) => {
             {includeScreenshot && (
               <div className="space-y-3 pt-3 border-t border-border">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">選擇截圖頻道</Label>
-                  <Badge variant="secondary" className="text-xs">
-                    已選 {cameraChannels.filter(c => c.enabled).length} 個頻道
+                  <Label className="text-xs sm:text-sm font-medium">選擇截圖頻道</Label>
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs">
+                    已選 {cameraChannels.filter(c => c.enabled).length} 個
                   </Badge>
                 </div>
                 

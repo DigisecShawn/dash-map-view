@@ -211,58 +211,62 @@ const MqttConnection = ({ onClose, onDeviceUpdate, onDevicesSave }: MqttConnecti
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-card shadow-glow">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-border py-3">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isConnected ? 'bg-success' : 'bg-gradient-primary'}`}>
-              <Radio className="w-5 h-5 text-white" />
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+      <Card className="w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden bg-card shadow-glow">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-border py-2 sm:py-3 px-3 sm:px-6">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${isConnected ? 'bg-success' : 'bg-gradient-primary'}`}>
+              <Radio className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div>
-              <CardTitle className="text-xl">MQTT 與設備管理</CardTitle>
-              <div className="flex items-center gap-2 mt-1">
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-xl truncate">MQTT 與設備管理</CardTitle>
+              <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
                 {isConnected ? (
-                  <Badge variant="default" className="bg-success text-white">
-                    <Wifi className="w-3 h-3 mr-1" />已連線
+                  <Badge variant="default" className="bg-success text-white text-[10px] sm:text-xs">
+                    <Wifi className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />已連線
                   </Badge>
                 ) : isConnecting ? (
-                  <Badge variant="secondary"><span className="animate-pulse">連線中...</span></Badge>
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs"><span className="animate-pulse">連線中...</span></Badge>
                 ) : (
-                  <Badge variant="outline"><WifiOff className="w-3 h-3 mr-1" />未連線</Badge>
+                  <Badge variant="outline" className="text-[10px] sm:text-xs"><WifiOff className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />未連線</Badge>
                 )}
                 {alerts.length > 0 && (
-                  <Badge variant="destructive"><Bell className="w-3 h-3 mr-1" />{alerts.length} 則警報</Badge>
+                  <Badge variant="destructive" className="text-[10px] sm:text-xs"><Bell className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />{alerts.length}</Badge>
                 )}
-                <Badge variant="secondary">{devices.length} 個設備</Badge>
+                <Badge variant="secondary" className="text-[10px] sm:text-xs hidden xs:inline-flex">{devices.length} 設備</Badge>
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
+          <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </CardHeader>
 
         <CardContent className="p-0">
           <Tabs defaultValue="connection" className="w-full">
-            <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent px-4 pt-2">
-              <TabsTrigger value="connection" className="gap-1 text-xs">
-                <Settings2 className="w-3 h-3" />連線
+            <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent px-2 sm:px-4 pt-1 sm:pt-2 overflow-x-auto">
+              <TabsTrigger value="connection" className="gap-1 text-[10px] sm:text-xs px-2 sm:px-3">
+                <Settings2 className="w-3 h-3" />
+                <span className="hidden xs:inline">連線</span>
               </TabsTrigger>
-              <TabsTrigger value="devices" className="gap-1 text-xs">
-                <Camera className="w-3 h-3" />設備
-                {devices.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{devices.length}</Badge>}
+              <TabsTrigger value="devices" className="gap-1 text-[10px] sm:text-xs px-2 sm:px-3">
+                <Camera className="w-3 h-3" />
+                <span className="hidden xs:inline">設備</span>
+                {devices.length > 0 && <Badge variant="secondary" className="ml-1 text-[10px]">{devices.length}</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="messages" className="gap-1 text-xs">
-                <Radio className="w-3 h-3" />訊息
-                {messages.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{messages.length}</Badge>}
+              <TabsTrigger value="messages" className="gap-1 text-[10px] sm:text-xs px-2 sm:px-3">
+                <Radio className="w-3 h-3" />
+                <span className="hidden xs:inline">訊息</span>
+                {messages.length > 0 && <Badge variant="secondary" className="ml-1 text-[10px]">{messages.length}</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="alerts" className="gap-1 text-xs">
-                <AlertTriangle className="w-3 h-3" />警報
-                {alerts.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{alerts.length}</Badge>}
+              <TabsTrigger value="alerts" className="gap-1 text-[10px] sm:text-xs px-2 sm:px-3">
+                <AlertTriangle className="w-3 h-3" />
+                <span className="hidden xs:inline">警報</span>
+                {alerts.length > 0 && <Badge variant="destructive" className="ml-1 text-[10px]">{alerts.length}</Badge>}
               </TabsTrigger>
             </TabsList>
 
-            <div className="p-4 max-h-[calc(90vh-180px)] overflow-y-auto">
+            <div className="p-3 sm:p-4 max-h-[calc(95vh-200px)] sm:max-h-[calc(90vh-180px)] overflow-y-auto">
               {/* Connection Tab */}
               <TabsContent value="connection" className="mt-0 space-y-4">
                 <div>
