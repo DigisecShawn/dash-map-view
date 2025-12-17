@@ -1,14 +1,17 @@
-import { useState } from 'react';
-import { Monitor, Search, Key, Bell, Settings } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Monitor, Search, Key, Bell, Settings, Radio } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import NotificationSettings from '@/components/NotificationSettings';
 import DeviceManagement from '@/components/DeviceManagement';
+import MqttConnection from '@/components/MqttConnection';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { DeviceStatusUpdate } from '@/hooks/useMqtt';
 import cctvNeihu from '@/assets/cctv-neihu.jpg';
 import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
@@ -73,19 +76,52 @@ const mockDevices = [
   },
 ];
 
+// Device type with mutable status
+interface Device {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  battery: number;
+  signal: number;
+  status: 'online' | 'offline';
+  location: string;
+  cctvImage: string;
+}
+
 const Index = () => {
+  const [devices, setDevices] = useState<Device[]>(mockDevices.map(d => ({ ...d })));
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showDeviceManagement, setShowDeviceManagement] = useState(false);
+  const [showMqttConnection, setShowMqttConnection] = useState(false);
+  const [mqttConnected, setMqttConnected] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [tempApiKey, setTempApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
 
-  const selectedDeviceData = mockDevices.find(d => d.id === selectedDevice) || null;
+  // Handle MQTT device updates
+  const handleDeviceUpdate = useCallback((update: DeviceStatusUpdate) => {
+    setDevices(prevDevices => 
+      prevDevices.map(device => {
+        if (device.id === update.deviceId) {
+          return {
+            ...device,
+            status: update.status,
+            battery: update.battery ?? device.battery,
+            signal: update.signal ?? device.signal,
+          };
+        }
+        return device;
+      })
+    );
+  }, []);
 
-  const filteredDevices = mockDevices.filter(device =>
+  const selectedDeviceData = devices.find(d => d.id === selectedDevice) || null;
+
+  const filteredDevices = devices.filter(device =>
     device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     device.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -122,6 +158,16 @@ const Index = () => {
             <div className="flex items-center gap-4">
               <ThemeToggle />
               <Button
+                variant={mqttConnected ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowMqttConnection(true)}
+                className={`gap-2 ${mqttConnected ? 'bg-success hover:bg-success/90' : ''}`}
+              >
+                <Radio className="w-4 h-4" />
+                MQTT
+                {mqttConnected && <Badge variant="secondary" className="ml-1 text-xs">已連線</Badge>}
+              </Button>
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDeviceManagement(true)}
@@ -153,7 +199,7 @@ const Index = () => {
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">在線設備</div>
                 <div className="text-xl font-bold text-success">
-                  {mockDevices.filter(d => d.status === 'online').length}/{mockDevices.length}
+                  {devices.filter(d => d.status === 'online').length}/{devices.length}
                 </div>
               </div>
             </div>
@@ -244,7 +290,7 @@ const Index = () => {
         <main className="flex-1 relative">
           <div className="h-full p-4">
             <Map
-              devices={mockDevices}
+              devices={devices}
               selectedDevice={selectedDevice}
               onDeviceSelect={handleDeviceSelect}
               apiKey={apiKey}
@@ -270,9 +316,17 @@ const Index = () => {
           {showDeviceManagement && (
             <DeviceManagement
               onClose={() => setShowDeviceManagement(false)}
-              onSave={(devices) => {
-                console.log('Saved devices:', devices);
+              onSave={(savedDevices) => {
+                console.log('Saved devices:', savedDevices);
               }}
+            />
+          )}
+
+          {/* MQTT Connection Modal */}
+          {showMqttConnection && (
+            <MqttConnection
+              onClose={() => setShowMqttConnection(false)}
+              onDeviceUpdate={handleDeviceUpdate}
             />
           )}
         </main>
