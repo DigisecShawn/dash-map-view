@@ -37,58 +37,58 @@ const DeviceDetails = ({ device, onClose }: DeviceDetailsProps) => {
   };
 
   return (
-    <div className="absolute top-0 left-0 right-0 bottom-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-      <Card className="w-full max-w-3xl bg-card shadow-glow max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-300">
+      <Card className="w-full max-w-3xl bg-card shadow-glow max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="p-4 sm:p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-                <Monitor className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow shrink-0">
+                <Monitor className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-foreground">{device.name}</h2>
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-xl font-bold text-foreground truncate">{device.name}</h2>
                 <div className="flex items-center gap-2 mt-1">
                   <div className={`w-2 h-2 rounded-full ${
                     device.status === 'online' ? 'bg-success animate-pulse' : 'bg-muted-foreground'
                   }`} />
-                  <span className="text-sm text-muted-foreground capitalize">{device.status}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground capitalize">{device.status}</span>
                 </div>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-secondary">
+            <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-secondary shrink-0">
               <X className="w-5 h-5" />
             </Button>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <Card className="p-3 bg-secondary border-0">
-              <div className="flex items-center gap-2">
-                <Battery className={`w-4 h-4 ${getBatteryColor(device.battery)}`} />
-                <div>
-                  <div className="text-xs text-muted-foreground">電量</div>
-                  <div className={`text-lg font-bold ${getBatteryColor(device.battery)}`}>{device.battery}%</div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+            <Card className="p-2 sm:p-3 bg-secondary border-0">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Battery className={`w-3 h-3 sm:w-4 sm:h-4 ${getBatteryColor(device.battery)}`} />
+                <div className="min-w-0">
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">電量</div>
+                  <div className={`text-sm sm:text-lg font-bold ${getBatteryColor(device.battery)}`}>{device.battery}%</div>
                 </div>
               </div>
             </Card>
 
-            <Card className="p-3 bg-secondary border-0">
-              <div className="flex items-center gap-2">
-                <Signal className={`w-4 h-4 ${getSignalColor(device.signal)}`} />
-                <div>
-                  <div className="text-xs text-muted-foreground">訊號</div>
-                  <div className={`text-lg font-bold ${getSignalColor(device.signal)}`}>{device.signal}%</div>
+            <Card className="p-2 sm:p-3 bg-secondary border-0">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Signal className={`w-3 h-3 sm:w-4 sm:h-4 ${getSignalColor(device.signal)}`} />
+                <div className="min-w-0">
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">訊號</div>
+                  <div className={`text-sm sm:text-lg font-bold ${getSignalColor(device.signal)}`}>{device.signal}%</div>
                 </div>
               </div>
             </Card>
 
-            <Card className="p-3 bg-secondary border-0">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-info" />
-                <div>
-                  <div className="text-xs text-muted-foreground">位置</div>
-                  <div className="text-sm font-semibold text-foreground truncate">{device.location}</div>
+            <Card className="p-2 sm:p-3 bg-secondary border-0">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-info" />
+                <div className="min-w-0">
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">位置</div>
+                  <div className="text-xs sm:text-sm font-semibold text-foreground truncate">{device.location}</div>
                 </div>
               </div>
             </Card>

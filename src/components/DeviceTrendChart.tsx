@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,6 @@ const DeviceTrendChart = ({ deviceId, deviceName }: DeviceTrendChartProps) => {
   useEffect(() => {
     fetchData();
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel('sensor-history')
       .on(
@@ -105,9 +104,9 @@ const DeviceTrendChart = ({ deviceId, deviceName }: DeviceTrendChartProps) => {
     if (value === null) return { label: '無數據', color: 'bg-muted' };
     if (value <= 15) return { label: '良好', color: 'bg-success' };
     if (value <= 35) return { label: '普通', color: 'bg-warning' };
-    if (value <= 54) return { label: '對敏感族群不健康', color: 'bg-orange-500' };
+    if (value <= 54) return { label: '敏感', color: 'bg-orange-500' };
     if (value <= 150) return { label: '不健康', color: 'bg-destructive' };
-    return { label: '非常不健康', color: 'bg-purple-600' };
+    return { label: '危險', color: 'bg-purple-600' };
   };
 
   const getTemperatureStatus = (value: number | null) => {
@@ -124,27 +123,27 @@ const DeviceTrendChart = ({ deviceId, deviceName }: DeviceTrendChartProps) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center h-48 sm:h-64">
+        <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Current Values */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
         <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Thermometer className="w-5 h-5 text-orange-500" />
-                <span className="text-sm text-muted-foreground">溫度</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Thermometer className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
+                <span className="text-xs sm:text-sm text-muted-foreground">溫度</span>
               </div>
-              <Badge className={tempStatus.color}>{tempStatus.label}</Badge>
+              <Badge className={`${tempStatus.color} text-[10px] sm:text-xs px-1.5 sm:px-2`}>{tempStatus.label}</Badge>
             </div>
-            <div className="mt-2">
-              <span className="text-3xl font-bold text-foreground">
+            <div className="mt-1 sm:mt-2">
+              <span className="text-xl sm:text-3xl font-bold text-foreground">
                 {latestData?.temperature !== null ? `${latestData?.temperature}°C` : '--'}
               </span>
             </div>
@@ -152,19 +151,19 @@ const DeviceTrendChart = ({ deviceId, deviceName }: DeviceTrendChartProps) => {
         </Card>
 
         <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wind className="w-5 h-5 text-blue-500" />
-                <span className="text-sm text-muted-foreground">PM2.5</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Wind className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                <span className="text-xs sm:text-sm text-muted-foreground">PM2.5</span>
               </div>
-              <Badge className={pm25Status.color}>{pm25Status.label}</Badge>
+              <Badge className={`${pm25Status.color} text-[10px] sm:text-xs px-1.5 sm:px-2`}>{pm25Status.label}</Badge>
             </div>
-            <div className="mt-2">
-              <span className="text-3xl font-bold text-foreground">
+            <div className="mt-1 sm:mt-2">
+              <span className="text-xl sm:text-3xl font-bold text-foreground">
                 {latestData?.pm25 !== null ? `${latestData?.pm25}` : '--'}
               </span>
-              <span className="text-sm text-muted-foreground ml-1">μg/m³</span>
+              <span className="text-[10px] sm:text-sm text-muted-foreground ml-1">μg/m³</span>
             </div>
           </CardContent>
         </Card>
@@ -172,14 +171,14 @@ const DeviceTrendChart = ({ deviceId, deviceName }: DeviceTrendChartProps) => {
 
       {/* Chart */}
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm sm:text-base flex items-center gap-1 sm:gap-2">
+              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
               歷史趨勢
             </CardTitle>
             <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-24 h-8 text-xs">
+              <SelectTrigger className="w-20 sm:w-24 h-7 sm:h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -191,7 +190,7 @@ const DeviceTrendChart = ({ deviceId, deviceName }: DeviceTrendChartProps) => {
             </Select>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
           <Tabs defaultValue="temperature" className="w-full">
             <TabsList className="grid w-full grid-cols-2 h-8">
               <TabsTrigger value="temperature" className="text-xs gap-1">
@@ -204,86 +203,95 @@ const DeviceTrendChart = ({ deviceId, deviceName }: DeviceTrendChartProps) => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="temperature" className="mt-4">
+            <TabsContent value="temperature" className="mt-3 sm:mt-4">
               {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis 
-                      dataKey="time" 
-                      tick={{ fontSize: 10 }} 
-                      className="text-muted-foreground"
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 10 }} 
-                      domain={['auto', 'auto']}
-                      unit="°C"
-                      className="text-muted-foreground"
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => [`${value}°C`, '溫度']}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="temperature"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="h-[150px] sm:h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis 
+                        dataKey="time" 
+                        tick={{ fontSize: 9 }} 
+                        className="text-muted-foreground"
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 9 }} 
+                        domain={['auto', 'auto']}
+                        unit="°C"
+                        className="text-muted-foreground"
+                        width={35}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                        }}
+                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        formatter={(value: number) => [`${value}°C`, '溫度']}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="temperature"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                  <p>暫無數據</p>
+                <div className="flex items-center justify-center h-[150px] sm:h-[200px] text-muted-foreground">
+                  <p className="text-sm">暫無數據</p>
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="pm25" className="mt-4">
+            <TabsContent value="pm25" className="mt-3 sm:mt-4">
               {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis 
-                      dataKey="time" 
-                      tick={{ fontSize: 10 }}
-                      className="text-muted-foreground"
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 10 }} 
-                      domain={[0, 'auto']}
-                      className="text-muted-foreground"
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => [`${value} μg/m³`, 'PM2.5']}
-                    />
-                    {/* Reference lines for PM2.5 levels */}
-                    <Line
-                      type="monotone"
-                      dataKey="pm25"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="h-[150px] sm:h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis 
+                        dataKey="time" 
+                        tick={{ fontSize: 9 }}
+                        className="text-muted-foreground"
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 9 }} 
+                        domain={[0, 'auto']}
+                        className="text-muted-foreground"
+                        width={35}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                        }}
+                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        formatter={(value: number) => [`${value} μg/m³`, 'PM2.5']}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="pm25"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                  <p>暫無數據</p>
+                <div className="flex items-center justify-center h-[150px] sm:h-[200px] text-muted-foreground">
+                  <p className="text-sm">暫無數據</p>
                 </div>
               )}
             </TabsContent>

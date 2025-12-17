@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Monitor, Search, Key, Bell, Radio } from 'lucide-react';
+import { Monitor, Search, Key, Bell, Radio, Menu, X, ChevronLeft } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
@@ -10,12 +10,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DeviceStatusUpdate } from '@/hooks/useMqtt';
 import cctvNeihu from '@/assets/cctv-neihu.jpg';
 import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
 import cctvXindian from '@/assets/cctv-xindian.jpg';
 import cctvSongshan from '@/assets/cctv-songshan.jpg';
+
 // Mock data for devices - 使用台灣真實座標
 const mockDevices = [
   {
@@ -75,7 +77,6 @@ const mockDevices = [
   },
 ];
 
-// Device type with mutable status
 interface Device {
   id: string;
   name: string;
@@ -99,8 +100,8 @@ const Index = () => {
   const [apiKey, setApiKey] = useState('');
   const [tempApiKey, setTempApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Handle MQTT device updates
   const handleDeviceUpdate = useCallback((update: DeviceStatusUpdate) => {
     setDevices(prevDevices => 
       prevDevices.map(device => {
@@ -131,6 +132,7 @@ const Index = () => {
   const handleDeviceClick = (deviceId: string) => {
     setSelectedDevice(deviceId);
     setShowDetails(true);
+    setSidebarOpen(false);
   };
 
   const handleApiKeySubmit = () => {
@@ -138,56 +140,108 @@ const Index = () => {
     setShowApiKeyInput(false);
   };
 
+  const DeviceList = () => (
+    <div className="h-full overflow-y-auto">
+      <div className="p-4">
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="搜尋設備..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-secondary border-border"
+          />
+        </div>
+        <div className="space-y-3">
+          {filteredDevices.map((device) => (
+            <DeviceCard
+              key={device.id}
+              {...device}
+              isSelected={selectedDevice === device.id}
+              onClick={() => handleDeviceClick(device.id)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card shadow-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-                <Monitor className="w-6 h-6 text-white" />
+      <header className="border-b border-border bg-card shadow-card sticky top-0 z-40">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
+            {/* Left: Menu + Logo */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Mobile Menu Button */}
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="lg:hidden">
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-80 p-0">
+                  <div className="flex items-center justify-between p-4 border-b border-border">
+                    <h2 className="font-semibold">設備列表</h2>
+                  </div>
+                  <DeviceList />
+                </SheetContent>
+              </Sheet>
+
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+                <Monitor className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">監控儀表板</h1>
-                <p className="text-sm text-muted-foreground">即時設備監控系統</p>
+              <div className="hidden xs:block">
+                <h1 className="text-lg sm:text-2xl font-bold text-foreground">監控儀表板</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">即時設備監控系統</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
               <ThemeToggle />
+              
+              {/* MQTT Button - Icon only on mobile */}
               <Button
                 variant={mqttConnected ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowMqttConnection(true)}
-                className={`gap-2 ${mqttConnected ? 'bg-success hover:bg-success/90' : ''}`}
+                className={`gap-1 sm:gap-2 px-2 sm:px-3 ${mqttConnected ? 'bg-success hover:bg-success/90' : ''}`}
               >
                 <Radio className="w-4 h-4" />
-                MQTT / 設備
-                {mqttConnected && <Badge variant="secondary" className="ml-1 text-xs">已連線</Badge>}
+                <span className="hidden sm:inline">MQTT / 設備</span>
+                {mqttConnected && <Badge variant="secondary" className="ml-1 text-xs hidden md:inline">已連線</Badge>}
               </Button>
+
+              {/* Notification Button - Icon only on mobile */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowNotificationSettings(true)}
-                className="gap-2"
+                className="gap-1 sm:gap-2 px-2 sm:px-3"
               >
                 <Bell className="w-4 h-4" />
-                通知設定
+                <span className="hidden sm:inline">通知設定</span>
               </Button>
+
+              {/* API Key Button - Hidden on mobile */}
               {apiKey && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowApiKeyInput(true)}
-                  className="gap-2"
+                  className="gap-2 hidden md:flex"
                 >
                   <Key className="w-4 h-4" />
-                  更改 API Key
+                  <span className="hidden lg:inline">更改 API Key</span>
                 </Button>
               )}
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">在線設備</div>
-                <div className="text-xl font-bold text-success">
+
+              {/* Online Status */}
+              <div className="text-right pl-2 border-l border-border">
+                <div className="text-xs text-muted-foreground hidden sm:block">在線設備</div>
+                <div className="text-lg sm:text-xl font-bold text-success">
                   {devices.filter(d => d.status === 'online').length}/{devices.length}
                 </div>
               </div>
@@ -199,14 +253,14 @@ const Index = () => {
       {/* API Key Input Modal */}
       {showApiKeyInput && !apiKey && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6 bg-card shadow-glow">
+          <Card className="w-full max-w-md p-4 sm:p-6 bg-card shadow-glow">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-                <Key className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+                <Key className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-foreground">Google Maps API Key</h2>
-                <p className="text-sm text-muted-foreground">需要 API Key 來顯示地圖</p>
+                <h2 className="text-lg sm:text-xl font-bold text-foreground">Google Maps API Key</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground">需要 API Key 來顯示地圖</p>
               </div>
             </div>
             
@@ -248,36 +302,15 @@ const Index = () => {
         </div>
       )}
 
-      <div className="flex h-[calc(100vh-89px)]">
-        {/* Sidebar */}
-        <aside className="w-80 border-r border-border bg-card overflow-y-auto">
-          <div className="p-4">
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="搜尋設備..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-secondary border-border"
-              />
-            </div>
-
-            <div className="space-y-3">
-              {filteredDevices.map((device) => (
-                <DeviceCard
-                  key={device.id}
-                  {...device}
-                  isSelected={selectedDevice === device.id}
-                  onClick={() => handleDeviceClick(device.id)}
-                />
-              ))}
-            </div>
-          </div>
+      <div className="flex h-[calc(100vh-65px)] sm:h-[calc(100vh-81px)]">
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block w-80 border-r border-border bg-card">
+          <DeviceList />
         </aside>
 
         {/* Main Content - Map */}
         <main className="flex-1 relative">
-          <div className="h-full p-4">
+          <div className="h-full p-2 sm:p-4">
             <Map
               devices={devices}
               selectedDevice={selectedDevice}
