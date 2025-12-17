@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Monitor, Search, Key, Bell } from 'lucide-react';
+import { Monitor, Search, Key, Bell, Settings } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import NotificationSettings from '@/components/NotificationSettings';
+import DeviceManagement from '@/components/DeviceManagement';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,6 @@ import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
 import cctvXindian from '@/assets/cctv-xindian.jpg';
 import cctvSongshan from '@/assets/cctv-songshan.jpg';
-
 // Mock data for devices - 使用台灣真實座標
 const mockDevices = [
   {
@@ -78,6 +78,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [showDeviceManagement, setShowDeviceManagement] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [tempApiKey, setTempApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
@@ -120,6 +121,15 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeviceManagement(true)}
+                className="gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                設備管理
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -253,6 +263,16 @@ const Index = () => {
           {showNotificationSettings && (
             <NotificationSettings
               onClose={() => setShowNotificationSettings(false)}
+            />
+          )}
+
+          {/* Device Management Modal */}
+          {showDeviceManagement && (
+            <DeviceManagement
+              onClose={() => setShowDeviceManagement(false)}
+              onSave={(devices) => {
+                console.log('Saved devices:', devices);
+              }}
             />
           )}
         </main>

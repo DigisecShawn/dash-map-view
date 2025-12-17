@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, MessageSquare, Mail, Phone, Camera, Save, TestTube, Loader2, Bell } from 'lucide-react';
+import { X, MessageSquare, Mail, Phone, Camera, Save, TestTube, Loader2, Bell, Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+interface CameraChannelConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  snapshotUrl: string;
+}
 
 interface NotificationConfig {
   line: {
@@ -32,6 +41,14 @@ interface NotificationSettingsProps {
   onClose: () => void;
 }
 
+const defaultCameraChannels: CameraChannelConfig[] = [
+  { id: 'ch1', name: '內湖汙水廠工地 - 主攝影機', enabled: true, snapshotUrl: 'http://{ip}/cgi-bin/snapshot.cgi?channel=1' },
+  { id: 'ch2', name: '新莊土地重劃工地 - 主攝影機', enabled: true, snapshotUrl: 'http://{ip}/cgi-bin/snapshot.cgi?channel=1' },
+  { id: 'ch3', name: '板橋車站雙子星工地 - 主攝影機', enabled: true, snapshotUrl: 'http://{ip}/cgi-bin/snapshot.cgi?channel=1' },
+  { id: 'ch4', name: '新店道路拓寬工地 - 主攝影機', enabled: false, snapshotUrl: 'http://{ip}/cgi-bin/snapshot.cgi?channel=1' },
+  { id: 'ch5', name: '松山捷運站新建工地 - 主攝影機', enabled: true, snapshotUrl: 'http://{ip}/cgi-bin/snapshot.cgi?channel=1' },
+];
+
 const NotificationSettings = ({ onClose }: NotificationSettingsProps) => {
   const [config, setConfig] = useState<NotificationConfig>({
     line: { enabled: false, channelAccessToken: '', userId: '' },
@@ -44,6 +61,9 @@ const NotificationSettings = ({ onClose }: NotificationSettingsProps) => {
   const [newEmailRecipient, setNewEmailRecipient] = useState('');
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [includeScreenshot, setIncludeScreenshot] = useState(true);
+  const [cameraChannels, setCameraChannels] = useState<CameraChannelConfig[]>(defaultCameraChannels);
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelUrl, setNewChannelUrl] = useState('');
 
   useEffect(() => {
     fetchSettings();
@@ -86,6 +106,11 @@ const NotificationSettings = ({ onClose }: NotificationSettingsProps) => {
               phoneNumbers: (settingConfig.phoneNumbers as string[]) || [],
               provider: (settingConfig.provider as string) || 'twilio',
             };
+          }
+          
+          // Load camera channels from settings if available
+          if (settingConfig.cameraChannels) {
+            setCameraChannels(settingConfig.cameraChannels as CameraChannelConfig[]);
           }
         });
         setConfig(newConfig);
@@ -245,7 +270,7 @@ const NotificationSettings = ({ onClose }: NotificationSettingsProps) => {
 
         <CardContent className="p-6">
           {/* Screenshot Settings */}
-          <div className="mb-6 p-4 bg-secondary rounded-lg">
+          <div className="mb-6 p-4 bg-secondary rounded-lg space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Camera className="w-5 h-5 text-primary" />
@@ -259,6 +284,88 @@ const NotificationSettings = ({ onClose }: NotificationSettingsProps) => {
                 onCheckedChange={setIncludeScreenshot}
               />
             </div>
+
+            {includeScreenshot && (
+              <div className="space-y-3 pt-3 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">選擇截圖頻道</Label>
+                  <Badge variant="secondary" className="text-xs">
+                    已選 {cameraChannels.filter(c => c.enabled).length} 個頻道
+                  </Badge>
+                </div>
+                
+                <ScrollArea className="h-40 rounded-md border border-border p-2">
+                  <div className="space-y-2">
+                    {cameraChannels.map((channel) => (
+                      <div key={channel.id} className="flex items-start gap-3 p-2 rounded hover:bg-muted/50">
+                        <Checkbox
+                          id={channel.id}
+                          checked={channel.enabled}
+                          onCheckedChange={(checked) => {
+                            setCameraChannels(prev =>
+                              prev.map(c => c.id === channel.id ? { ...c, enabled: !!checked } : c)
+                            );
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <label htmlFor={channel.id} className="text-sm font-medium cursor-pointer">
+                            {channel.name}
+                          </label>
+                          <p className="text-xs text-muted-foreground font-mono truncate">
+                            {channel.snapshotUrl}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+
+                {/* Add new channel */}
+                <div className="space-y-2 pt-2">
+                  <Label className="text-xs">新增自訂頻道</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="頻道名稱"
+                      value={newChannelName}
+                      onChange={(e) => setNewChannelName(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                    <Input
+                      placeholder="截圖 URL 語法"
+                      value={newChannelUrl}
+                      onChange={(e) => setNewChannelUrl(e.target.value)}
+                      className="h-8 text-sm font-mono flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        if (newChannelName && newChannelUrl) {
+                          setCameraChannels(prev => [
+                            ...prev,
+                            {
+                              id: `custom-${Date.now()}`,
+                              name: newChannelName,
+                              enabled: true,
+                              snapshotUrl: newChannelUrl,
+                            },
+                          ]);
+                          setNewChannelName('');
+                          setNewChannelUrl('');
+                          toast.success('頻道已新增');
+                        }
+                      }}
+                      disabled={!newChannelName || !newChannelUrl}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    URL 變數: {'{ip}'}, {'{port}'}, {'{channel}'}, {'{user}'}, {'{pass}'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <Tabs defaultValue="line" className="w-full">
