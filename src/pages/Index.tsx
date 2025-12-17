@@ -1,10 +1,9 @@
 import { useState, useCallback } from 'react';
-import { Monitor, Search, Key, Bell, Settings, Radio } from 'lucide-react';
+import { Monitor, Search, Key, Bell, Radio } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import NotificationSettings from '@/components/NotificationSettings';
-import DeviceManagement from '@/components/DeviceManagement';
 import MqttConnection from '@/components/MqttConnection';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
@@ -95,7 +94,6 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const [showDeviceManagement, setShowDeviceManagement] = useState(false);
   const [showMqttConnection, setShowMqttConnection] = useState(false);
   const [mqttConnected, setMqttConnected] = useState(false);
   const [apiKey, setApiKey] = useState('');
@@ -164,17 +162,8 @@ const Index = () => {
                 className={`gap-2 ${mqttConnected ? 'bg-success hover:bg-success/90' : ''}`}
               >
                 <Radio className="w-4 h-4" />
-                MQTT
+                MQTT / 設備
                 {mqttConnected && <Badge variant="secondary" className="ml-1 text-xs">已連線</Badge>}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDeviceManagement(true)}
-                className="gap-2"
-              >
-                <Settings className="w-4 h-4" />
-                設備管理
               </Button>
               <Button
                 variant="outline"
@@ -309,16 +298,6 @@ const Index = () => {
           {showNotificationSettings && (
             <NotificationSettings
               onClose={() => setShowNotificationSettings(false)}
-            />
-          )}
-
-          {/* Device Management Modal */}
-          {showDeviceManagement && (
-            <DeviceManagement
-              onClose={() => setShowDeviceManagement(false)}
-              onSave={(savedDevices) => {
-                console.log('Saved devices:', savedDevices);
-              }}
             />
           )}
 
