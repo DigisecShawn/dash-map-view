@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import mqtt, { MqttClient, IClientOptions } from 'mqtt';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface MqttConfig {
   brokerUrl: string;
@@ -14,8 +15,10 @@ export interface DeviceStatusUpdate {
   status: 'online' | 'offline';
   battery?: number;
   signal?: number;
+  temperature?: number;
+  pm25?: number;
   timestamp: string;
-  alertType?: 'battery_low' | 'signal_weak' | 'offline' | 'motion_detected' | 'error';
+  alertType?: 'battery_low' | 'signal_weak' | 'offline' | 'motion_detected' | 'error' | 'high_pm25' | 'high_temperature';
   alertMessage?: string;
 }
 
@@ -88,22 +91,50 @@ export const useMqtt = (): UseMqttReturn => {
           message.timestamp = message.timestamp || new Date().toISOString();
           
           setLastMessage(message);
-          setMessages((prev) => [message, ...prev].slice(0, 100)); // Keep last 100 messages
+          setMessages((prev) => [message, ...prev].slice(0, 100));
+
+          // Save sensor data to database if temperature or PM2.5 is present
+          if (message.temperature !== undefined || message.pm25 !== undefined) {
+            supabase.from('device_sensor_history').insert({
+              device_id: message.deviceId,
+              temperature: message.temperature,
+              pm25: message.pm25,
+              battery: message.battery,
+              signal_strength: message.signal,
+              recorded_at: message.timestamp,
+            }).then(({ error }) => {
+              if (error) console.error('Failed to save sensor data:', error);
+            });
+          }
 
           // Check for alerts
           if (message.alertType) {
             setAlerts((prev) => [message, ...prev].slice(0, 50));
             
-            // Show toast for alerts
             const alertMessages: Record<string, string> = {
               battery_low: `⚠️ ${message.deviceId} 電量過低`,
               signal_weak: `📶 ${message.deviceId} 訊號不佳`,
               offline: `🔴 ${message.deviceId} 已離線`,
               motion_detected: `🚨 ${message.deviceId} 偵測到移動`,
               error: `❌ ${message.deviceId} 發生錯誤`,
+              high_pm25: `🌫️ ${message.deviceId} PM2.5 過高`,
+              high_temperature: `🌡️ ${message.deviceId} 溫度過高`,
             };
             
             toast.warning(alertMessages[message.alertType] || message.alertMessage || '收到警報');
+          }
+
+          // Auto-generate alerts for high values
+          if (message.pm25 && message.pm25 > 100 && !message.alertType) {
+            const alert = { ...message, alertType: 'high_pm25' as const, alertMessage: `PM2.5 濃度達 ${message.pm25} μg/m³` };
+            setAlerts((prev) => [alert, ...prev].slice(0, 50));
+            toast.warning(`🌫️ ${message.deviceId} PM2.5 過高: ${message.pm25} μg/m³`);
+          }
+
+          if (message.temperature && message.temperature > 40 && !message.alertType) {
+            const alert = { ...message, alertType: 'high_temperature' as const, alertMessage: `溫度達 ${message.temperature}°C` };
+            setAlerts((prev) => [alert, ...prev].slice(0, 50));
+            toast.warning(`🌡️ ${message.deviceId} 溫度過高: ${message.temperature}°C`);
           }
         } catch (e) {
           console.error('Failed to parse MQTT message:', e);
