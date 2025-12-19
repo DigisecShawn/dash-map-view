@@ -115,7 +115,6 @@ const Index = () => {
 
   const handleDeviceClick = (deviceId: string) => {
     setSelectedDevice(deviceId);
-    setShowDetails(true);
     setSidebarOpen(false);
   };
 
