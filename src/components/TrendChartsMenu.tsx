@@ -49,24 +49,29 @@ const TrendChartsMenu = ({ onClose }: TrendChartsMenuProps) => {
   const selectedDevice = devices.find(d => d.device_id === selectedDeviceId);
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-300">
-      <Card className="w-full max-w-4xl bg-card shadow-glow max-h-[95vh] overflow-hidden">
-        <div className="p-4 sm:p-6 h-full flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-foreground">環境監測趨勢</h2>
-                <p className="text-xs sm:text-sm text-muted-foreground">PM2.5 與溫度歷史數據</p>
-              </div>
+    <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in duration-300">
+      {/* Header */}
+      <header className="border-b border-border bg-card shadow-card px-4 sm:px-6 py-4">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+              <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-5 h-5" />
-            </Button>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">環境監測趨勢</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">PM2.5 與溫度歷史數據</p>
+            </div>
           </div>
+          <Button variant="outline" onClick={onClose} className="gap-2">
+            <X className="w-4 h-4" />
+            <span className="hidden sm:inline">返回監控台</span>
+          </Button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto h-full flex flex-col">
 
           {/* Device Selector */}
           <div className="mb-4">
@@ -135,7 +140,7 @@ const TrendChartsMenu = ({ onClose }: TrendChartsMenuProps) => {
             )}
           </ScrollArea>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };
