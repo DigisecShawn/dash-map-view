@@ -309,6 +309,7 @@ const Index = () => {
               devices={devices}
               selectedDevice={selectedDevice}
               onDeviceSelect={handleDeviceSelect}
+              onDeviceClick={handleDeviceClick}
               apiKey={apiKey}
             />
           </div>

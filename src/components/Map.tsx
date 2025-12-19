@@ -15,6 +15,7 @@ interface MapProps {
   devices: Device[];
   selectedDevice: string | null;
   onDeviceSelect: (deviceId: string) => void;
+  onDeviceClick?: (deviceId: string) => void;
   apiKey: string;
 }
 
@@ -70,7 +71,7 @@ const getPulseColor = (state: string) => {
   }
 };
 
-const Map = ({ devices, selectedDevice, onDeviceSelect, apiKey }: MapProps) => {
+const Map = ({ devices, selectedDevice, onDeviceSelect, onDeviceClick, apiKey }: MapProps) => {
   const center = { lat: 25.0330, lng: 121.5654 };
 
   if (!apiKey) {
@@ -106,7 +107,10 @@ const Map = ({ devices, selectedDevice, onDeviceSelect, apiKey }: MapProps) => {
               <AdvancedMarker
                 key={device.id}
                 position={{ lat: device.lat, lng: device.lng }}
-                onClick={() => onDeviceSelect(device.id)}
+                onClick={() => {
+                  onDeviceSelect(device.id);
+                  onDeviceClick?.(device.id);
+                }}
                 className="cursor-pointer"
               >
                 <div className="relative group">
