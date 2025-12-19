@@ -247,28 +247,36 @@ const NotificationSettings = ({ onClose }: NotificationSettingsProps) => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
-      <Card className="w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto bg-card shadow-glow">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-border px-3 sm:px-6 py-3 sm:py-4">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in duration-300">
+      {/* Header */}
+      <header className="border-b border-border bg-card shadow-card px-4 sm:px-6 py-4">
+        <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+              <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <CardTitle className="text-base sm:text-xl">通知平台設定</CardTitle>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">通知平台設定</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">管理 LINE、Email、SMS 通知</p>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 sm:h-9 sm:w-9">
-            <X className="w-4 h-4 sm:w-5 sm:h-5" />
+          <Button variant="outline" onClick={onClose} className="gap-2">
+            <X className="w-4 h-4" />
+            <span className="hidden sm:inline">返回監控台</span>
           </Button>
-        </CardHeader>
+        </div>
+      </header>
 
-        <CardContent className="p-3 sm:p-6">
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="max-w-4xl mx-auto">
           {/* Screenshot Settings */}
           <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-secondary rounded-lg space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
@@ -605,8 +613,8 @@ const NotificationSettings = ({ onClose }: NotificationSettingsProps) => {
               儲存設定
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
