@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Monitor, Search, Key, Bell, Menu } from 'lucide-react';
+import { Monitor, Search, Key, Bell, Menu, Settings, BarChart3 } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import NotificationSettings from '@/components/NotificationSettings';
+import DeviceManagement from '@/components/DeviceManagement';
+import TrendChartsMenu from '@/components/TrendChartsMenu';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -92,6 +94,8 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [showDeviceManagement, setShowDeviceManagement] = useState(false);
+  const [showTrendCharts, setShowTrendCharts] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [tempApiKey, setTempApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
@@ -182,6 +186,27 @@ const Index = () => {
             <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
               <ThemeToggle />
               
+              {/* Trend Charts Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTrendCharts(true)}
+                className="gap-1 sm:gap-2 px-2 sm:px-3"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">趨勢圖</span>
+              </Button>
+
+              {/* Device Management Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeviceManagement(true)}
+                className="gap-1 sm:gap-2 px-2 sm:px-3"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">設備管理</span>
+              </Button>
 
               {/* Notification Button - Icon only on mobile */}
               <Button
@@ -300,6 +325,20 @@ const Index = () => {
           {showNotificationSettings && (
             <NotificationSettings
               onClose={() => setShowNotificationSettings(false)}
+            />
+          )}
+
+          {/* Device Management Modal */}
+          {showDeviceManagement && (
+            <DeviceManagement
+              onClose={() => setShowDeviceManagement(false)}
+            />
+          )}
+
+          {/* Trend Charts Modal */}
+          {showTrendCharts && (
+            <TrendChartsMenu
+              onClose={() => setShowTrendCharts(false)}
             />
           )}
 

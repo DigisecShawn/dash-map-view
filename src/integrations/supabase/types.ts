@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      cameras: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          is_active: boolean
+          name: string
+          stream_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          stream_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          stream_url?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cameras_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_sensor_history: {
         Row: {
           battery: number | null
@@ -44,6 +82,51 @@ export type Database = {
           recorded_at?: string
           signal_strength?: number | null
           temperature?: number | null
+        }
+        Relationships: []
+      }
+      devices: {
+        Row: {
+          battery: number | null
+          created_at: string
+          device_id: string
+          id: string
+          lat: number
+          lng: number
+          location: string | null
+          mqtt_topic: string | null
+          name: string
+          signal_strength: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          battery?: number | null
+          created_at?: string
+          device_id: string
+          id?: string
+          lat: number
+          lng: number
+          location?: string | null
+          mqtt_topic?: string | null
+          name: string
+          signal_strength?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          battery?: number | null
+          created_at?: string
+          device_id?: string
+          id?: string
+          lat?: number
+          lng?: number
+          location?: string | null
+          mqtt_topic?: string | null
+          name?: string
+          signal_strength?: number | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
