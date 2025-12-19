@@ -210,7 +210,7 @@ const Index = () => {
                 className={`gap-1 sm:gap-2 px-2 sm:px-3 ${mqttConnected ? 'bg-success hover:bg-success/90' : ''}`}
               >
                 <Radio className="w-4 h-4" />
-                <span className="hidden sm:inline">MQTT / 設備</span>
+                <span className="hidden sm:inline">MQTT</span>
                 {mqttConnected && <Badge variant="secondary" className="ml-1 text-xs hidden md:inline">已連線</Badge>}
               </Button>
 
