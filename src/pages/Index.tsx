@@ -1,17 +1,14 @@
-import { useState, useCallback } from 'react';
-import { Monitor, Search, Key, Bell, Radio, Menu, X, ChevronLeft } from 'lucide-react';
+import { useState } from 'react';
+import { Monitor, Search, Key, Bell, Menu } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import NotificationSettings from '@/components/NotificationSettings';
-import MqttConnection from '@/components/MqttConnection';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { DeviceStatusUpdate } from '@/hooks/useMqtt';
 import cctvNeihu from '@/assets/cctv-neihu.jpg';
 import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
@@ -95,28 +92,11 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const [showMqttConnection, setShowMqttConnection] = useState(false);
-  const [mqttConnected, setMqttConnected] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [tempApiKey, setTempApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleDeviceUpdate = useCallback((update: DeviceStatusUpdate) => {
-    setDevices(prevDevices => 
-      prevDevices.map(device => {
-        if (device.id === update.deviceId) {
-          return {
-            ...device,
-            status: update.status,
-            battery: update.battery ?? device.battery,
-            signal: update.signal ?? device.signal,
-          };
-        }
-        return device;
-      })
-    );
-  }, []);
 
   const selectedDeviceData = devices.find(d => d.id === selectedDevice) || null;
 
@@ -202,17 +182,6 @@ const Index = () => {
             <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
               <ThemeToggle />
               
-              {/* MQTT Button - Icon only on mobile */}
-              <Button
-                variant={mqttConnected ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowMqttConnection(true)}
-                className={`gap-1 sm:gap-2 px-2 sm:px-3 ${mqttConnected ? 'bg-success hover:bg-success/90' : ''}`}
-              >
-                <Radio className="w-4 h-4" />
-                <span className="hidden sm:inline">MQTT</span>
-                {mqttConnected && <Badge variant="secondary" className="ml-1 text-xs hidden md:inline">已連線</Badge>}
-              </Button>
 
               {/* Notification Button - Icon only on mobile */}
               <Button
@@ -334,13 +303,6 @@ const Index = () => {
             />
           )}
 
-          {/* MQTT Connection Modal */}
-          {showMqttConnection && (
-            <MqttConnection
-              onClose={() => setShowMqttConnection(false)}
-              onDeviceUpdate={handleDeviceUpdate}
-            />
-          )}
         </main>
       </div>
     </div>
