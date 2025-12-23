@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           device_id: string
+          icon_type: string
           id: string
           is_active: boolean
           name: string
@@ -27,6 +28,7 @@ export type Database = {
         Insert: {
           created_at?: string
           device_id: string
+          icon_type?: string
           id?: string
           is_active?: boolean
           name: string
@@ -36,6 +38,7 @@ export type Database = {
         Update: {
           created_at?: string
           device_id?: string
+          icon_type?: string
           id?: string
           is_active?: boolean
           name?: string
