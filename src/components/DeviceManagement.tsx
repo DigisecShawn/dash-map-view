@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Video, Wifi, WifiOff, Settings, Camera, Cctv, Webcam, ScanEye, LucideIcon, Bell, AlertTriangle, Thermometer, Droplets, Volume2, Wind } from 'lucide-react';
+import { X, Plus, Trash2, Video, Wifi, WifiOff, Settings, Camera, Cctv, Webcam, ScanEye, LucideIcon, Bell, Thermometer, Droplets, Volume2, Wind } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -366,7 +365,7 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
         <div className="max-w-7xl mx-auto h-full">
 
           <div className="flex-1 overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
               {/* Devices List */}
               <Card className="p-4 bg-secondary border-0 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
@@ -503,276 +502,247 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                 </ScrollArea>
               </Card>
 
-              {/* Device Settings Panel */}
+              {/* Camera Management */}
               <Card className="p-4 bg-secondary border-0 flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    <Camera className="w-4 h-4" />
+                    攝影機
+                  </h3>
+                  {selectedDevice && (
+                    <Dialog open={showAddCamera} onOpenChange={setShowAddCamera}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" className="gap-1">
+                          <Plus className="w-4 h-4" />
+                          新增
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>新增攝影機</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-4">
+                          <div className="space-y-2">
+                            <Label>攝影機名稱 *</Label>
+                            <Input
+                              placeholder="例: 主攝影機"
+                              value={newCamera.name}
+                              onChange={(e) => setNewCamera({ ...newCamera, name: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>串流 URL *</Label>
+                            <Input
+                              placeholder="例: rtsp://192.168.1.100:554/stream"
+                              value={newCamera.stream_url}
+                              onChange={(e) => setNewCamera({ ...newCamera, stream_url: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>攝影機圖示</Label>
+                            <div className="grid grid-cols-5 gap-2">
+                              {CAMERA_ICON_TYPES.map(({ value, label, Icon }) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  onClick={() => setNewCamera({ ...newCamera, icon_type: value })}
+                                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                                    newCamera.icon_type === value
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-border bg-background hover:border-primary/50'
+                                  }`}
+                                >
+                                  <Icon className="w-6 h-6" />
+                                  <span className="text-[10px]">{label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <Button onClick={handleAddCamera} className="w-full">
+                            新增攝影機
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+
+                <ScrollArea className="flex-1">
+                  {!selectedDevice ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      請先選擇設備
+                    </div>
+                  ) : deviceCameras.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      此設備尚無攝影機
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {deviceCameras.map((camera) => {
+                        const CameraIcon = getCameraIcon(camera.icon_type);
+                        return (
+                          <Card key={camera.id} className="p-3 bg-background">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <CameraIcon className={`w-4 h-4 shrink-0 ${camera.is_active ? 'text-success' : 'text-muted-foreground'}`} />
+                                <div className="min-w-0">
+                                  <div className="font-medium text-xs truncate">{camera.name}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => toggleCameraStatus(camera)}
+                                >
+                                  {camera.is_active ? '停用' : '啟用'}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteCamera(camera.id)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </ScrollArea>
+              </Card>
+
+              {/* Alarm Settings Panel - Large */}
+              <Card className="p-4 bg-secondary border-0 flex flex-col lg:col-span-1">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-warning" />
+                    警報設定
+                  </h3>
+                  {selectedDevice && (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        disabled={savingAlarms}
+                        onClick={async () => {
+                          for (const metric of ALARM_METRICS) {
+                            await updateAlarmThreshold(selectedDevice.device_id, metric.value, metric.defaultThreshold, true);
+                          }
+                        }}
+                      >
+                        全部啟用
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        disabled={savingAlarms}
+                        onClick={async () => {
+                          for (const metric of ALARM_METRICS) {
+                            const threshold = getDeviceAlarmThreshold(selectedDevice.device_id, metric.value);
+                            if (threshold?.enabled) {
+                              await updateAlarmThreshold(selectedDevice.device_id, metric.value, threshold.threshold_value, false);
+                            }
+                          }
+                        }}
+                      >
+                        全部停用
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
                 {!selectedDevice ? (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                    請先選擇左側的設備
+                    請先選擇設備
                   </div>
                 ) : (
-                  <Tabs defaultValue="cameras" className="flex flex-col h-full">
-                    <div className="flex items-center justify-between mb-3">
-                      <TabsList className="grid grid-cols-2 w-auto">
-                        <TabsTrigger value="cameras" className="gap-1.5 px-3">
-                          <Camera className="w-4 h-4" />
-                          攝影機
-                        </TabsTrigger>
-                        <TabsTrigger value="alarms" className="gap-1.5 px-3">
-                          <Bell className="w-4 h-4" />
-                          警報設定
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
+                  <ScrollArea className="flex-1">
+                    <div className="grid grid-cols-1 gap-3">
+                      {ALARM_METRICS.map(({ value: metricType, label, unit, Icon, defaultThreshold }) => {
+                        const threshold = getDeviceAlarmThreshold(selectedDevice.device_id, metricType);
+                        const currentValue = threshold?.threshold_value ?? defaultThreshold;
+                        const isEnabled = threshold?.enabled ?? false;
 
-                    {/* Cameras Tab */}
-                    <TabsContent value="cameras" className="flex-1 mt-0 overflow-hidden flex flex-col">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-foreground text-sm">
-                          {selectedDevice.name} 的攝影機
-                        </h3>
-                        <Dialog open={showAddCamera} onOpenChange={setShowAddCamera}>
-                          <DialogTrigger asChild>
-                            <Button size="sm" className="gap-1">
-                              <Camera className="w-4 h-4" />
-                              新增
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>新增攝影機</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 pt-4">
-                              <div className="space-y-2">
-                                <Label>攝影機名稱 *</Label>
-                                <Input
-                                  placeholder="例: 主攝影機"
-                                  value={newCamera.name}
-                                  onChange={(e) => setNewCamera({ ...newCamera, name: e.target.value })}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>串流 URL *</Label>
-                                <Input
-                                  placeholder="例: rtsp://192.168.1.100:554/stream"
-                                  value={newCamera.stream_url}
-                                  onChange={(e) => setNewCamera({ ...newCamera, stream_url: e.target.value })}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>攝影機圖示</Label>
-                                <div className="grid grid-cols-5 gap-2">
-                                  {CAMERA_ICON_TYPES.map(({ value, label, Icon }) => (
-                                    <button
-                                      key={value}
-                                      type="button"
-                                      onClick={() => setNewCamera({ ...newCamera, icon_type: value })}
-                                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
-                                        newCamera.icon_type === value
-                                          ? 'border-primary bg-primary/10 text-primary'
-                                          : 'border-border bg-background hover:border-primary/50'
-                                      }`}
-                                    >
-                                      <Icon className="w-6 h-6" />
-                                      <span className="text-[10px]">{label}</span>
-                                    </button>
-                                  ))}
+                        return (
+                          <Card 
+                            key={metricType} 
+                            className={`p-4 transition-all ${
+                              isEnabled 
+                                ? 'bg-background border-2 border-primary/30 shadow-sm' 
+                                : 'bg-muted/30 border border-border'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                                  isEnabled 
+                                    ? 'bg-gradient-to-br from-primary/20 to-primary/10 text-primary' 
+                                    : 'bg-muted text-muted-foreground'
+                                }`}>
+                                  <Icon className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="font-semibold text-base">{label}</div>
+                                  {isEnabled ? (
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <span className="text-xs text-muted-foreground">閾值:</span>
+                                      <Input
+                                        type="number"
+                                        value={currentValue}
+                                        className="h-8 w-24 text-sm font-medium"
+                                        disabled={savingAlarms}
+                                        onChange={(e) => {
+                                          const newValue = parseFloat(e.target.value) || 0;
+                                          setAlarmThresholds(prev => {
+                                            const existing = prev.find(t => t.device_id === selectedDevice.device_id && t.metric_type === metricType);
+                                            if (existing) {
+                                              return prev.map(t => 
+                                                t.device_id === selectedDevice.device_id && t.metric_type === metricType
+                                                  ? { ...t, threshold_value: newValue }
+                                                  : t
+                                              );
+                                            } else {
+                                              return [...prev, {
+                                                device_id: selectedDevice.device_id,
+                                                metric_type: metricType,
+                                                threshold_value: newValue,
+                                                enabled: true
+                                              }];
+                                            }
+                                          });
+                                        }}
+                                        onBlur={(e) => {
+                                          const newValue = parseFloat(e.target.value) || 0;
+                                          updateAlarmThreshold(selectedDevice.device_id, metricType, newValue, true);
+                                        }}
+                                      />
+                                      <span className="text-sm font-medium text-muted-foreground">{unit}</span>
+                                    </div>
+                                  ) : (
+                                    <div className="text-sm text-muted-foreground mt-1">警報未啟用</div>
+                                  )}
                                 </div>
                               </div>
-                              <Button onClick={handleAddCamera} className="w-full">
-                                新增攝影機
-                              </Button>
+                              <Switch
+                                checked={isEnabled}
+                                disabled={savingAlarms}
+                                onCheckedChange={(checked) => {
+                                  updateAlarmThreshold(selectedDevice.device_id, metricType, currentValue, checked);
+                                }}
+                              />
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-
-                      <ScrollArea className="flex-1">
-                        {deviceCameras.length === 0 ? (
-                          <div className="text-center py-8 text-muted-foreground">
-                            此設備尚無攝影機
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {deviceCameras.map((camera) => {
-                              const CameraIcon = getCameraIcon(camera.icon_type);
-                              return (
-                                <Card key={camera.id} className="p-3 bg-background">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                      <CameraIcon className={`w-5 h-5 shrink-0 ${camera.is_active ? 'text-success' : 'text-muted-foreground'}`} />
-                                      <div className="min-w-0">
-                                        <div className="font-medium text-sm truncate">{camera.name}</div>
-                                        <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                          {camera.stream_url}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => toggleCameraStatus(camera)}
-                                      >
-                                        {camera.is_active ? '停用' : '啟用'}
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-destructive hover:text-destructive"
-                                        onClick={() => handleDeleteCamera(camera.id)}
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                  {/* Icon selector row */}
-                                  <div className="mt-3 pt-3 border-t border-border">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-muted-foreground shrink-0">圖示:</span>
-                                      <div className="flex gap-1">
-                                        {CAMERA_ICON_TYPES.map(({ value, label, Icon }) => (
-                                          <button
-                                            key={value}
-                                            type="button"
-                                            title={label}
-                                            onClick={() => updateCameraIcon(camera, value)}
-                                            className={`p-1.5 rounded transition-all ${
-                                              camera.icon_type === value
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                                            }`}
-                                          >
-                                            <Icon className="w-4 h-4" />
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </ScrollArea>
-                    </TabsContent>
-
-                    {/* Alarm Settings Tab */}
-                    <TabsContent value="alarms" className="flex-1 mt-0 overflow-hidden flex flex-col">
-                      <div className="mb-3 p-3 bg-background rounded-lg">
-                        <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-warning" />
-                          {selectedDevice.name} 的警報設定
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          設定各項環境指標的警報閾值，超過時將觸發警報通知
-                        </p>
-                      </div>
-
-                      <ScrollArea className="flex-1">
-                        <div className="space-y-2 pr-2">
-                          {ALARM_METRICS.map(({ value: metricType, label, unit, Icon, defaultThreshold }) => {
-                            const threshold = getDeviceAlarmThreshold(selectedDevice.device_id, metricType);
-                            const currentValue = threshold?.threshold_value ?? defaultThreshold;
-                            const isEnabled = threshold?.enabled ?? false;
-
-                            return (
-                              <Card key={metricType} className={`p-3 transition-all ${isEnabled ? 'bg-background border-primary/20' : 'bg-muted/50'}`}>
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                                      isEnabled ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
-                                    }`}>
-                                      <Icon className="w-4 h-4" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-medium text-sm">{label}</div>
-                                      {isEnabled ? (
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Input
-                                            type="number"
-                                            value={currentValue}
-                                            className="h-7 w-20 text-xs"
-                                            disabled={savingAlarms}
-                                            onChange={(e) => {
-                                              const newValue = parseFloat(e.target.value) || 0;
-                                              setAlarmThresholds(prev => {
-                                                const existing = prev.find(t => t.device_id === selectedDevice.device_id && t.metric_type === metricType);
-                                                if (existing) {
-                                                  return prev.map(t => 
-                                                    t.device_id === selectedDevice.device_id && t.metric_type === metricType
-                                                      ? { ...t, threshold_value: newValue }
-                                                      : t
-                                                  );
-                                                } else {
-                                                  return [...prev, {
-                                                    device_id: selectedDevice.device_id,
-                                                    metric_type: metricType,
-                                                    threshold_value: newValue,
-                                                    enabled: true
-                                                  }];
-                                                }
-                                              });
-                                            }}
-                                            onBlur={(e) => {
-                                              const newValue = parseFloat(e.target.value) || 0;
-                                              updateAlarmThreshold(selectedDevice.device_id, metricType, newValue, true);
-                                            }}
-                                          />
-                                          <span className="text-xs text-muted-foreground">{unit}</span>
-                                        </div>
-                                      ) : (
-                                        <div className="text-xs text-muted-foreground">未啟用</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <Switch
-                                    checked={isEnabled}
-                                    disabled={savingAlarms}
-                                    onCheckedChange={(checked) => {
-                                      updateAlarmThreshold(selectedDevice.device_id, metricType, currentValue, checked);
-                                    }}
-                                  />
-                                </div>
-                              </Card>
-                            );
-                          })}
-                        </div>
-                      </ScrollArea>
-
-                      {/* Quick Actions */}
-                      <div className="mt-3 pt-3 border-t border-border flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-xs"
-                          disabled={savingAlarms}
-                          onClick={async () => {
-                            for (const metric of ALARM_METRICS) {
-                              await updateAlarmThreshold(selectedDevice.device_id, metric.value, metric.defaultThreshold, true);
-                            }
-                          }}
-                        >
-                          全部啟用
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="flex-1 text-xs"
-                          disabled={savingAlarms}
-                          onClick={async () => {
-                            for (const metric of ALARM_METRICS) {
-                              const threshold = getDeviceAlarmThreshold(selectedDevice.device_id, metric.value);
-                              if (threshold?.enabled) {
-                                await updateAlarmThreshold(selectedDevice.device_id, metric.value, threshold.threshold_value, false);
-                              }
-                            }
-                          }}
-                        >
-                          全部停用
-                        </Button>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
                 )}
               </Card>
             </div>
