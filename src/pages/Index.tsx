@@ -118,6 +118,11 @@ const Index = () => {
     setSidebarOpen(false);
   };
 
+  const handleShowDeviceDetails = (deviceId: string) => {
+    setSelectedDevice(deviceId);
+    setShowDetails(true);
+  };
+
   const handleApiKeySubmit = () => {
     setApiKey(tempApiKey);
     setShowApiKeyInput(false);
@@ -142,6 +147,7 @@ const Index = () => {
               {...device}
               isSelected={selectedDevice === device.id}
               onClick={() => handleDeviceClick(device.id)}
+              onShowDetails={() => handleShowDeviceDetails(device.id)}
             />
           ))}
         </div>
