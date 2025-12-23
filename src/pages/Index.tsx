@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { Monitor, Search, Key, Bell, Menu, Settings, BarChart3, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Monitor, Search, Key, Bell, Menu, Settings, BarChart3, AlertTriangle, History } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
@@ -244,6 +245,17 @@ const Index = () => {
                   </Badge>
                 )}
               </Button>
+
+              {/* Alarm History Link */}
+              <Link to="/alarm-history">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="警報歷史紀錄"
+                >
+                  <History className="w-4 h-4" />
+                </Button>
+              </Link>
 
               {/* Manual Alarm Check Button */}
               <Button
