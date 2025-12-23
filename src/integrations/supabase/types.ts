@@ -57,7 +57,10 @@ export type Database = {
           battery: number | null
           created_at: string
           device_id: string
+          humidity: number | null
           id: string
+          noise: number | null
+          pm10: number | null
           pm25: number | null
           recorded_at: string
           signal_strength: number | null
@@ -67,7 +70,10 @@ export type Database = {
           battery?: number | null
           created_at?: string
           device_id: string
+          humidity?: number | null
           id?: string
+          noise?: number | null
+          pm10?: number | null
           pm25?: number | null
           recorded_at?: string
           signal_strength?: number | null
@@ -77,7 +83,10 @@ export type Database = {
           battery?: number | null
           created_at?: string
           device_id?: string
+          humidity?: number | null
           id?: string
+          noise?: number | null
+          pm10?: number | null
           pm25?: number | null
           recorded_at?: string
           signal_strength?: number | null
