@@ -9,36 +9,9 @@ interface DeviceCardProps {
   status: 'online' | 'offline';
   isSelected: boolean;
   onClick: () => void;
-  onShowDetails: () => void;
 }
 
-import { useRef, useCallback } from 'react';
-
-const DeviceCard = ({ name, battery, signal, status, isSelected, onClick, onShowDetails }: DeviceCardProps) => {
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-  const isLongPress = useRef(false);
-
-  const handleTouchStart = useCallback(() => {
-    isLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      isLongPress.current = true;
-      onShowDetails();
-    }, 500);
-  }, [onShowDetails]);
-
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
-
-  const handleClick = useCallback(() => {
-    if (!isLongPress.current) {
-      onClick();
-    }
-    isLongPress.current = false;
-  }, [onClick]);
+const DeviceCard = ({ name, battery, signal, status, isSelected, onClick }: DeviceCardProps) => {
   const getBatteryColor = (level: number) => {
     if (level > 60) return 'text-success';
     if (level > 30) return 'text-warning';
@@ -53,12 +26,8 @@ const DeviceCard = ({ name, battery, signal, status, isSelected, onClick, onShow
 
   return (
     <Card
-      onClick={handleClick}
-      onDoubleClick={onShowDetails}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-      className={`p-3 sm:p-4 cursor-pointer transition-all duration-300 hover:shadow-glow select-none ${
+      onClick={onClick}
+      className={`p-3 sm:p-4 cursor-pointer transition-all duration-300 hover:shadow-glow ${
         isSelected ? 'bg-gradient-primary shadow-glow border-primary' : 'bg-card shadow-card hover:border-primary/50'
       }`}
     >
