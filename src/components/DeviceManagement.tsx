@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Video, Wifi, WifiOff, Settings, Camera, Cctv, Webcam, ScanEye, MonitorPlay, LucideIcon } from 'lucide-react';
+import { X, Plus, Trash2, Video, Wifi, WifiOff, Settings, Camera, Cctv, Webcam, ScanEye, LucideIcon, Bell, AlertTriangle, Thermometer, Droplets, Volume2, Wind } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -32,9 +34,26 @@ interface CameraItem {
   icon_type: string;
 }
 
+interface AlarmThreshold {
+  id?: string;
+  device_id: string;
+  metric_type: string;
+  threshold_value: number;
+  enabled: boolean;
+}
+
 interface DeviceManagementProps {
   onClose: () => void;
 }
+
+// Alarm metric types configuration
+const ALARM_METRICS: { value: string; label: string; unit: string; Icon: LucideIcon; defaultThreshold: number }[] = [
+  { value: 'pm25', label: 'PM2.5', unit: 'µg/m³', Icon: Wind, defaultThreshold: 35 },
+  { value: 'pm10', label: 'PM10', unit: 'µg/m³', Icon: Wind, defaultThreshold: 125 },
+  { value: 'temperature', label: '溫度', unit: '°C', Icon: Thermometer, defaultThreshold: 35 },
+  { value: 'humidity', label: '濕度', unit: '%', Icon: Droplets, defaultThreshold: 80 },
+  { value: 'noise', label: '噪音', unit: 'dB', Icon: Volume2, defaultThreshold: 85 },
+];
 
 // Camera icon types configuration
 const CAMERA_ICON_TYPES: { value: string; label: string; Icon: LucideIcon }[] = [
@@ -53,10 +72,12 @@ const getCameraIcon = (iconType: string): LucideIcon => {
 const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [cameras, setCameras] = useState<CameraItem[]>([]);
+  const [alarmThresholds, setAlarmThresholds] = useState<AlarmThreshold[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [showAddCamera, setShowAddCamera] = useState(false);
+  const [savingAlarms, setSavingAlarms] = useState(false);
   
   // Form states
   const [newDevice, setNewDevice] = useState({
@@ -77,6 +98,7 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
   useEffect(() => {
     fetchDevices();
     fetchCameras();
+    fetchAlarmThresholds();
 
     // Subscribe to realtime updates
     const devicesChannel = supabase
@@ -93,9 +115,17 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
       })
       .subscribe();
 
+    const alarmsChannel = supabase
+      .channel('alarms-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'device_alarm_thresholds' }, () => {
+        fetchAlarmThresholds();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(devicesChannel);
       supabase.removeChannel(camerasChannel);
+      supabase.removeChannel(alarmsChannel);
     };
   }, []);
 
@@ -127,6 +157,55 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
       setCameras(data || []);
     } catch (error) {
       console.error('Error fetching cameras:', error);
+    }
+  };
+
+  const fetchAlarmThresholds = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('device_alarm_thresholds')
+        .select('*');
+
+      if (error) throw error;
+      setAlarmThresholds(data || []);
+    } catch (error) {
+      console.error('Error fetching alarm thresholds:', error);
+    }
+  };
+
+  const getDeviceAlarmThreshold = (deviceId: string, metricType: string): AlarmThreshold | undefined => {
+    return alarmThresholds.find(t => t.device_id === deviceId && t.metric_type === metricType);
+  };
+
+  const updateAlarmThreshold = async (deviceId: string, metricType: string, value: number, enabled: boolean) => {
+    setSavingAlarms(true);
+    try {
+      const existing = getDeviceAlarmThreshold(deviceId, metricType);
+      
+      if (existing?.id) {
+        const { error } = await supabase
+          .from('device_alarm_thresholds')
+          .update({ threshold_value: value, enabled })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('device_alarm_thresholds')
+          .insert({
+            device_id: deviceId,
+            metric_type: metricType,
+            threshold_value: value,
+            enabled
+          });
+        if (error) throw error;
+      }
+      
+      toast.success('警報設定已更新');
+    } catch (error) {
+      console.error('Error updating alarm threshold:', error);
+      toast.error('更新警報設定失敗');
+    } finally {
+      setSavingAlarms(false);
     }
   };
 
@@ -424,142 +503,250 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                 </ScrollArea>
               </Card>
 
-              {/* Camera Management */}
+              {/* Device Settings Panel */}
               <Card className="p-4 bg-secondary border-0 flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-foreground">
-                    {selectedDevice ? `${selectedDevice.name} 的攝影機` : '選擇設備以管理攝影機'}
-                  </h3>
-                  {selectedDevice && (
-                    <Dialog open={showAddCamera} onOpenChange={setShowAddCamera}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" className="gap-1">
+                {!selectedDevice ? (
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                    請先選擇左側的設備
+                  </div>
+                ) : (
+                  <Tabs defaultValue="cameras" className="flex flex-col h-full">
+                    <div className="flex items-center justify-between mb-3">
+                      <TabsList className="grid grid-cols-2 w-auto">
+                        <TabsTrigger value="cameras" className="gap-1.5 px-3">
                           <Camera className="w-4 h-4" />
-                          新增攝影機
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>新增攝影機</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 pt-4">
-                          <div className="space-y-2">
-                            <Label>攝影機名稱 *</Label>
-                            <Input
-                              placeholder="例: 主攝影機"
-                              value={newCamera.name}
-                              onChange={(e) => setNewCamera({ ...newCamera, name: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>串流 URL *</Label>
-                            <Input
-                              placeholder="例: rtsp://192.168.1.100:554/stream"
-                              value={newCamera.stream_url}
-                              onChange={(e) => setNewCamera({ ...newCamera, stream_url: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>攝影機圖示</Label>
-                            <div className="grid grid-cols-5 gap-2">
-                              {CAMERA_ICON_TYPES.map(({ value, label, Icon }) => (
-                                <button
-                                  key={value}
-                                  type="button"
-                                  onClick={() => setNewCamera({ ...newCamera, icon_type: value })}
-                                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
-                                    newCamera.icon_type === value
-                                      ? 'border-primary bg-primary/10 text-primary'
-                                      : 'border-border bg-background hover:border-primary/50'
-                                  }`}
-                                >
-                                  <Icon className="w-6 h-6" />
-                                  <span className="text-[10px]">{label}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <Button onClick={handleAddCamera} className="w-full">
-                            新增攝影機
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </div>
+                          攝影機
+                        </TabsTrigger>
+                        <TabsTrigger value="alarms" className="gap-1.5 px-3">
+                          <Bell className="w-4 h-4" />
+                          警報設定
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
 
-                <ScrollArea className="flex-1">
-                  {!selectedDevice ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      請先選擇左側的設備
-                    </div>
-                  ) : deviceCameras.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      此設備尚無攝影機
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {deviceCameras.map((camera) => {
-                        const CameraIcon = getCameraIcon(camera.icon_type);
-                        return (
-                          <Card key={camera.id} className="p-3 bg-background">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <CameraIcon className={`w-5 h-5 shrink-0 ${camera.is_active ? 'text-success' : 'text-muted-foreground'}`} />
-                                <div className="min-w-0">
-                                  <div className="font-medium text-sm truncate">{camera.name}</div>
-                                  <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                    {camera.stream_url}
-                                  </div>
-                                </div>
+                    {/* Cameras Tab */}
+                    <TabsContent value="cameras" className="flex-1 mt-0 overflow-hidden flex flex-col">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-foreground text-sm">
+                          {selectedDevice.name} 的攝影機
+                        </h3>
+                        <Dialog open={showAddCamera} onOpenChange={setShowAddCamera}>
+                          <DialogTrigger asChild>
+                            <Button size="sm" className="gap-1">
+                              <Camera className="w-4 h-4" />
+                              新增
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>新增攝影機</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 pt-4">
+                              <div className="space-y-2">
+                                <Label>攝影機名稱 *</Label>
+                                <Input
+                                  placeholder="例: 主攝影機"
+                                  value={newCamera.name}
+                                  onChange={(e) => setNewCamera({ ...newCamera, name: e.target.value })}
+                                />
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => toggleCameraStatus(camera)}
-                                >
-                                  {camera.is_active ? '停用' : '啟用'}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() => handleDeleteCamera(camera.id)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                              <div className="space-y-2">
+                                <Label>串流 URL *</Label>
+                                <Input
+                                  placeholder="例: rtsp://192.168.1.100:554/stream"
+                                  value={newCamera.stream_url}
+                                  onChange={(e) => setNewCamera({ ...newCamera, stream_url: e.target.value })}
+                                />
                               </div>
-                            </div>
-                            {/* Icon selector row */}
-                            <div className="mt-3 pt-3 border-t border-border">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground shrink-0">圖示:</span>
-                                <div className="flex gap-1">
+                              <div className="space-y-2">
+                                <Label>攝影機圖示</Label>
+                                <div className="grid grid-cols-5 gap-2">
                                   {CAMERA_ICON_TYPES.map(({ value, label, Icon }) => (
                                     <button
                                       key={value}
                                       type="button"
-                                      title={label}
-                                      onClick={() => updateCameraIcon(camera, value)}
-                                      className={`p-1.5 rounded transition-all ${
-                                        camera.icon_type === value
-                                          ? 'bg-primary text-primary-foreground'
-                                          : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                                      onClick={() => setNewCamera({ ...newCamera, icon_type: value })}
+                                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                                        newCamera.icon_type === value
+                                          ? 'border-primary bg-primary/10 text-primary'
+                                          : 'border-border bg-background hover:border-primary/50'
                                       }`}
                                     >
-                                      <Icon className="w-4 h-4" />
+                                      <Icon className="w-6 h-6" />
+                                      <span className="text-[10px]">{label}</span>
                                     </button>
                                   ))}
                                 </div>
                               </div>
+                              <Button onClick={handleAddCamera} className="w-full">
+                                新增攝影機
+                              </Button>
                             </div>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                </ScrollArea>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+
+                      <ScrollArea className="flex-1">
+                        {deviceCameras.length === 0 ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            此設備尚無攝影機
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {deviceCameras.map((camera) => {
+                              const CameraIcon = getCameraIcon(camera.icon_type);
+                              return (
+                                <Card key={camera.id} className="p-3 bg-background">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <CameraIcon className={`w-5 h-5 shrink-0 ${camera.is_active ? 'text-success' : 'text-muted-foreground'}`} />
+                                      <div className="min-w-0">
+                                        <div className="font-medium text-sm truncate">{camera.name}</div>
+                                        <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                          {camera.stream_url}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => toggleCameraStatus(camera)}
+                                      >
+                                        {camera.is_active ? '停用' : '啟用'}
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                        onClick={() => handleDeleteCamera(camera.id)}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  {/* Icon selector row */}
+                                  <div className="mt-3 pt-3 border-t border-border">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-muted-foreground shrink-0">圖示:</span>
+                                      <div className="flex gap-1">
+                                        {CAMERA_ICON_TYPES.map(({ value, label, Icon }) => (
+                                          <button
+                                            key={value}
+                                            type="button"
+                                            title={label}
+                                            onClick={() => updateCameraIcon(camera, value)}
+                                            className={`p-1.5 rounded transition-all ${
+                                              camera.icon_type === value
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                                            }`}
+                                          >
+                                            <Icon className="w-4 h-4" />
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </TabsContent>
+
+                    {/* Alarm Settings Tab */}
+                    <TabsContent value="alarms" className="flex-1 mt-0 overflow-hidden flex flex-col">
+                      <div className="mb-3">
+                        <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-warning" />
+                          {selectedDevice.name} 的警報設定
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          設定各項環境指標的警報閾值，超過時將觸發警報通知
+                        </p>
+                      </div>
+
+                      <ScrollArea className="flex-1">
+                        <div className="space-y-3">
+                          {ALARM_METRICS.map(({ value: metricType, label, unit, Icon, defaultThreshold }) => {
+                            const threshold = getDeviceAlarmThreshold(selectedDevice.device_id, metricType);
+                            const currentValue = threshold?.threshold_value ?? defaultThreshold;
+                            const isEnabled = threshold?.enabled ?? false;
+
+                            return (
+                              <Card key={metricType} className="p-4 bg-background">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                      isEnabled ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                                    }`}>
+                                      <Icon className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-sm">{label}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        超過 {currentValue} {unit} 時警報
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Switch
+                                    checked={isEnabled}
+                                    disabled={savingAlarms}
+                                    onCheckedChange={(checked) => {
+                                      updateAlarmThreshold(selectedDevice.device_id, metricType, currentValue, checked);
+                                    }}
+                                  />
+                                </div>
+                                
+                                {isEnabled && (
+                                  <div className="mt-4 pt-4 border-t border-border">
+                                    <div className="flex items-center gap-3">
+                                      <Label className="text-xs text-muted-foreground shrink-0 w-16">閾值:</Label>
+                                      <Input
+                                        type="number"
+                                        value={currentValue}
+                                        className="h-8 w-24"
+                                        disabled={savingAlarms}
+                                        onChange={(e) => {
+                                          const newValue = parseFloat(e.target.value) || 0;
+                                          // Update local state immediately for responsive UI
+                                          setAlarmThresholds(prev => {
+                                            const existing = prev.find(t => t.device_id === selectedDevice.device_id && t.metric_type === metricType);
+                                            if (existing) {
+                                              return prev.map(t => 
+                                                t.device_id === selectedDevice.device_id && t.metric_type === metricType
+                                                  ? { ...t, threshold_value: newValue }
+                                                  : t
+                                              );
+                                            } else {
+                                              return [...prev, {
+                                                device_id: selectedDevice.device_id,
+                                                metric_type: metricType,
+                                                threshold_value: newValue,
+                                                enabled: true
+                                              }];
+                                            }
+                                          });
+                                        }}
+                                        onBlur={(e) => {
+                                          const newValue = parseFloat(e.target.value) || 0;
+                                          updateAlarmThreshold(selectedDevice.device_id, metricType, newValue, true);
+                                        }}
+                                      />
+                                      <span className="text-xs text-muted-foreground">{unit}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+                  </Tabs>
+                )}
               </Card>
             </div>
           </div>
