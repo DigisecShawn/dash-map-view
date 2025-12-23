@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Video, Wifi, WifiOff, Settings, Camera } from 'lucide-react';
+import { X, Plus, Trash2, Video, Wifi, WifiOff, Settings, Camera, Cctv, Webcam, ScanEye, MonitorPlay, LucideIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,11 +29,26 @@ interface CameraItem {
   name: string;
   stream_url: string;
   is_active: boolean;
+  icon_type: string;
 }
 
 interface DeviceManagementProps {
   onClose: () => void;
 }
+
+// Camera icon types configuration
+const CAMERA_ICON_TYPES: { value: string; label: string; Icon: LucideIcon }[] = [
+  { value: 'camera', label: '相機', Icon: Camera },
+  { value: 'video', label: '錄影機', Icon: Video },
+  { value: 'cctv', label: 'CCTV', Icon: Cctv },
+  { value: 'webcam', label: '網路攝影機', Icon: Webcam },
+  { value: 'dome', label: '球型攝影機', Icon: ScanEye },
+];
+
+const getCameraIcon = (iconType: string): LucideIcon => {
+  const found = CAMERA_ICON_TYPES.find(t => t.value === iconType);
+  return found?.Icon || Camera;
+};
 
 const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -56,7 +70,8 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
   
   const [newCamera, setNewCamera] = useState({
     name: '',
-    stream_url: ''
+    stream_url: '',
+    icon_type: 'camera'
   });
 
   useEffect(() => {
@@ -177,13 +192,14 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
         device_id: selectedDevice.id,
         name: newCamera.name,
         stream_url: newCamera.stream_url,
+        icon_type: newCamera.icon_type,
         is_active: true
       });
 
       if (error) throw error;
 
       toast.success('攝影機新增成功');
-      setNewCamera({ name: '', stream_url: '' });
+      setNewCamera({ name: '', stream_url: '', icon_type: 'camera' });
       setShowAddCamera(false);
     } catch (error) {
       console.error('Error adding camera:', error);
@@ -222,6 +238,22 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
     } catch (error) {
       console.error('Error toggling camera:', error);
       toast.error('更新攝影機狀態失敗');
+    }
+  };
+
+  const updateCameraIcon = async (camera: CameraItem, iconType: string) => {
+    try {
+      const { error } = await supabase
+        .from('cameras')
+        .update({ icon_type: iconType })
+        .eq('id', camera.id);
+
+      if (error) throw error;
+
+      toast.success('攝影機圖示已更新');
+    } catch (error) {
+      console.error('Error updating camera icon:', error);
+      toast.error('更新攝影機圖示失敗');
     }
   };
 
@@ -427,6 +459,26 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                               onChange={(e) => setNewCamera({ ...newCamera, stream_url: e.target.value })}
                             />
                           </div>
+                          <div className="space-y-2">
+                            <Label>攝影機圖示</Label>
+                            <div className="grid grid-cols-5 gap-2">
+                              {CAMERA_ICON_TYPES.map(({ value, label, Icon }) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  onClick={() => setNewCamera({ ...newCamera, icon_type: value })}
+                                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                                    newCamera.icon_type === value
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-border bg-background hover:border-primary/50'
+                                  }`}
+                                >
+                                  <Icon className="w-6 h-6" />
+                                  <span className="text-[10px]">{label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           <Button onClick={handleAddCamera} className="w-full">
                             新增攝影機
                           </Button>
@@ -447,38 +499,64 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {deviceCameras.map((camera) => (
-                        <Card key={camera.id} className="p-3 bg-background">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <Video className={`w-4 h-4 shrink-0 ${camera.is_active ? 'text-success' : 'text-muted-foreground'}`} />
-                              <div className="min-w-0">
-                                <div className="font-medium text-sm truncate">{camera.name}</div>
-                                <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                  {camera.stream_url}
+                      {deviceCameras.map((camera) => {
+                        const CameraIcon = getCameraIcon(camera.icon_type);
+                        return (
+                          <Card key={camera.id} className="p-3 bg-background">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <CameraIcon className={`w-5 h-5 shrink-0 ${camera.is_active ? 'text-success' : 'text-muted-foreground'}`} />
+                                <div className="min-w-0">
+                                  <div className="font-medium text-sm truncate">{camera.name}</div>
+                                  <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                    {camera.stream_url}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleCameraStatus(camera)}
+                                >
+                                  {camera.is_active ? '停用' : '啟用'}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteCamera(camera.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            {/* Icon selector row */}
+                            <div className="mt-3 pt-3 border-t border-border">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground shrink-0">圖示:</span>
+                                <div className="flex gap-1">
+                                  {CAMERA_ICON_TYPES.map(({ value, label, Icon }) => (
+                                    <button
+                                      key={value}
+                                      type="button"
+                                      title={label}
+                                      onClick={() => updateCameraIcon(camera, value)}
+                                      className={`p-1.5 rounded transition-all ${
+                                        camera.icon_type === value
+                                          ? 'bg-primary text-primary-foreground'
+                                          : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                                      }`}
+                                    >
+                                      <Icon className="w-4 h-4" />
+                                    </button>
+                                  ))}
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleCameraStatus(camera)}
-                              >
-                                {camera.is_active ? '停用' : '啟用'}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => handleDeleteCamera(camera.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
+                          </Card>
+                        );
+                      })}
                     </div>
                   )}
                 </ScrollArea>
