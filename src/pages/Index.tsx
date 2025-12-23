@@ -255,11 +255,13 @@ const Index = () => {
               {/* Alarm History Link */}
               <Link to="/alarm-history">
                 <Button
-                  variant="ghost"
-                  size="icon"
+                  variant="outline"
+                  size="sm"
                   title="警報歷史紀錄"
+                  className="gap-1 sm:gap-2 px-2 sm:px-3"
                 >
                   <History className="w-4 h-4" />
+                  <span className="hidden sm:inline">警報歷史</span>
                 </Button>
               </Link>
 
