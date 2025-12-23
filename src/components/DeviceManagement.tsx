@@ -658,7 +658,7 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
 
                     {/* Alarm Settings Tab */}
                     <TabsContent value="alarms" className="flex-1 mt-0 overflow-hidden flex flex-col">
-                      <div className="mb-3">
+                      <div className="mb-3 p-3 bg-background rounded-lg">
                         <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
                           <AlertTriangle className="w-4 h-4 text-warning" />
                           {selectedDevice.name} 的警報設定
@@ -669,26 +669,60 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                       </div>
 
                       <ScrollArea className="flex-1">
-                        <div className="space-y-3">
+                        <div className="space-y-2 pr-2">
                           {ALARM_METRICS.map(({ value: metricType, label, unit, Icon, defaultThreshold }) => {
                             const threshold = getDeviceAlarmThreshold(selectedDevice.device_id, metricType);
                             const currentValue = threshold?.threshold_value ?? defaultThreshold;
                             const isEnabled = threshold?.enabled ?? false;
 
                             return (
-                              <Card key={metricType} className="p-4 bg-background">
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              <Card key={metricType} className={`p-3 transition-all ${isEnabled ? 'bg-background border-primary/20' : 'bg-muted/50'}`}>
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                                       isEnabled ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
                                     }`}>
-                                      <Icon className="w-5 h-5" />
+                                      <Icon className="w-4 h-4" />
                                     </div>
-                                    <div>
+                                    <div className="flex-1 min-w-0">
                                       <div className="font-medium text-sm">{label}</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        超過 {currentValue} {unit} 時警報
-                                      </div>
+                                      {isEnabled ? (
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Input
+                                            type="number"
+                                            value={currentValue}
+                                            className="h-7 w-20 text-xs"
+                                            disabled={savingAlarms}
+                                            onChange={(e) => {
+                                              const newValue = parseFloat(e.target.value) || 0;
+                                              setAlarmThresholds(prev => {
+                                                const existing = prev.find(t => t.device_id === selectedDevice.device_id && t.metric_type === metricType);
+                                                if (existing) {
+                                                  return prev.map(t => 
+                                                    t.device_id === selectedDevice.device_id && t.metric_type === metricType
+                                                      ? { ...t, threshold_value: newValue }
+                                                      : t
+                                                  );
+                                                } else {
+                                                  return [...prev, {
+                                                    device_id: selectedDevice.device_id,
+                                                    metric_type: metricType,
+                                                    threshold_value: newValue,
+                                                    enabled: true
+                                                  }];
+                                                }
+                                              });
+                                            }}
+                                            onBlur={(e) => {
+                                              const newValue = parseFloat(e.target.value) || 0;
+                                              updateAlarmThreshold(selectedDevice.device_id, metricType, newValue, true);
+                                            }}
+                                          />
+                                          <span className="text-xs text-muted-foreground">{unit}</span>
+                                        </div>
+                                      ) : (
+                                        <div className="text-xs text-muted-foreground">未啟用</div>
+                                      )}
                                     </div>
                                   </div>
                                   <Switch
@@ -699,51 +733,44 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                                     }}
                                   />
                                 </div>
-                                
-                                {isEnabled && (
-                                  <div className="mt-4 pt-4 border-t border-border">
-                                    <div className="flex items-center gap-3">
-                                      <Label className="text-xs text-muted-foreground shrink-0 w-16">閾值:</Label>
-                                      <Input
-                                        type="number"
-                                        value={currentValue}
-                                        className="h-8 w-24"
-                                        disabled={savingAlarms}
-                                        onChange={(e) => {
-                                          const newValue = parseFloat(e.target.value) || 0;
-                                          // Update local state immediately for responsive UI
-                                          setAlarmThresholds(prev => {
-                                            const existing = prev.find(t => t.device_id === selectedDevice.device_id && t.metric_type === metricType);
-                                            if (existing) {
-                                              return prev.map(t => 
-                                                t.device_id === selectedDevice.device_id && t.metric_type === metricType
-                                                  ? { ...t, threshold_value: newValue }
-                                                  : t
-                                              );
-                                            } else {
-                                              return [...prev, {
-                                                device_id: selectedDevice.device_id,
-                                                metric_type: metricType,
-                                                threshold_value: newValue,
-                                                enabled: true
-                                              }];
-                                            }
-                                          });
-                                        }}
-                                        onBlur={(e) => {
-                                          const newValue = parseFloat(e.target.value) || 0;
-                                          updateAlarmThreshold(selectedDevice.device_id, metricType, newValue, true);
-                                        }}
-                                      />
-                                      <span className="text-xs text-muted-foreground">{unit}</span>
-                                    </div>
-                                  </div>
-                                )}
                               </Card>
                             );
                           })}
                         </div>
                       </ScrollArea>
+
+                      {/* Quick Actions */}
+                      <div className="mt-3 pt-3 border-t border-border flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-xs"
+                          disabled={savingAlarms}
+                          onClick={async () => {
+                            for (const metric of ALARM_METRICS) {
+                              await updateAlarmThreshold(selectedDevice.device_id, metric.value, metric.defaultThreshold, true);
+                            }
+                          }}
+                        >
+                          全部啟用
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1 text-xs"
+                          disabled={savingAlarms}
+                          onClick={async () => {
+                            for (const metric of ALARM_METRICS) {
+                              const threshold = getDeviceAlarmThreshold(selectedDevice.device_id, metric.value);
+                              if (threshold?.enabled) {
+                                await updateAlarmThreshold(selectedDevice.device_id, metric.value, threshold.threshold_value, false);
+                              }
+                            }
+                          }}
+                        >
+                          全部停用
+                        </Button>
+                      </div>
                     </TabsContent>
                   </Tabs>
                 )}
