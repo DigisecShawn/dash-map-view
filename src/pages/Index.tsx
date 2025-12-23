@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Monitor, Search, Key, Bell, Menu, Settings, BarChart3, AlertTriangle, History } from 'lucide-react';
+import { Monitor, Search, Bell, Menu, Settings, BarChart3, AlertTriangle, History } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
@@ -51,9 +51,7 @@ const Index = () => {
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showDeviceManagement, setShowDeviceManagement] = useState(false);
   const [showTrendCharts, setShowTrendCharts] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [tempApiKey, setTempApiKey] = useState('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
+  const apiKey = 'AIzaSyCPvsAfPyv9yhjaJDwD5SnkYiuQY9WkIYk';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeAlarms, setActiveAlarms] = useState<number>(0);
 
@@ -134,11 +132,6 @@ const Index = () => {
   const handleDeviceDoubleClick = (deviceId: string) => {
     setSelectedDevice(deviceId);
     setShowDetails(true);
-  };
-
-  const handleApiKeySubmit = () => {
-    setApiKey(tempApiKey);
-    setShowApiKeyInput(false);
   };
 
   const DeviceList = () => (
@@ -276,18 +269,6 @@ const Index = () => {
                 <AlertTriangle className="w-4 h-4" />
               </Button>
 
-              {/* API Key Button - Hidden on mobile */}
-              {apiKey && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowApiKeyInput(true)}
-                  className="gap-2 hidden md:flex"
-                >
-                  <Key className="w-4 h-4" />
-                  <span className="hidden lg:inline">更改 API Key</span>
-                </Button>
-              )}
 
               {/* Online Status */}
               <div className="text-right pl-2 border-l border-border">
@@ -300,58 +281,6 @@ const Index = () => {
           </div>
         </div>
       </header>
-
-      {/* API Key Input Modal */}
-      {showApiKeyInput && !apiKey && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-4 sm:p-6 bg-card shadow-glow">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-                <Key className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-foreground">Google Maps API Key</h2>
-                <p className="text-xs sm:text-sm text-muted-foreground">需要 API Key 來顯示地圖</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  請輸入您的 Google Maps API Key
-                </label>
-                <Input
-                  type="text"
-                  placeholder="AIzaSy..."
-                  value={tempApiKey}
-                  onChange={(e) => setTempApiKey(e.target.value)}
-                  className="bg-secondary border-border"
-                />
-              </div>
-
-              <div className="bg-secondary p-3 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-2">
-                  <strong>如何取得 API Key：</strong>
-                </p>
-                <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                  <li>前往 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a></li>
-                  <li>建立專案並啟用 Maps JavaScript API</li>
-                  <li>在「憑證」頁面建立 API 金鑰</li>
-                  <li>複製 API 金鑰並貼上於此</li>
-                </ol>
-              </div>
-
-              <Button
-                onClick={handleApiKeySubmit}
-                disabled={!tempApiKey.trim()}
-                className="w-full bg-gradient-primary hover:opacity-90"
-              >
-                確認
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
 
       <div className="flex h-[calc(100vh-65px)] sm:h-[calc(100vh-81px)]">
         {/* Desktop Sidebar */}
