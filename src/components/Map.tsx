@@ -17,6 +17,7 @@ interface MapProps {
   selectedDevice: string | null;
   onDeviceSelect: (deviceId: string) => void;
   onDeviceClick?: (deviceId: string) => void;
+  onDeviceDoubleClick?: (deviceId: string) => void;
   apiKey: string;
 }
 
@@ -73,7 +74,7 @@ const getPulseColor = (state: string) => {
 };
 
 // Inner component that has access to map instance
-const MapContent = ({ devices, selectedDevice, onDeviceSelect, onDeviceClick }: Omit<MapProps, 'apiKey'>) => {
+const MapContent = ({ devices, selectedDevice, onDeviceSelect, onDeviceClick, onDeviceDoubleClick }: Omit<MapProps, 'apiKey'>) => {
   const map = useMap();
 
   // Pan to selected device when it changes
@@ -104,7 +105,13 @@ const MapContent = ({ devices, selectedDevice, onDeviceSelect, onDeviceClick }: 
             }}
             className="cursor-pointer"
           >
-            <div className="relative group">
+            <div 
+              className="relative group"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                onDeviceDoubleClick?.(device.id);
+              }}
+            >
               {/* Outer pulse ring */}
               <div className={`absolute -inset-4 ${state !== 'offline' ? 'animate-pulse' : ''}`}>
                 <div className={`w-20 h-20 rounded-full ${pulseColor}`} />
@@ -184,7 +191,7 @@ const MapContent = ({ devices, selectedDevice, onDeviceSelect, onDeviceClick }: 
   );
 };
 
-const Map = ({ devices, selectedDevice, onDeviceSelect, onDeviceClick, apiKey }: MapProps) => {
+const Map = ({ devices, selectedDevice, onDeviceSelect, onDeviceClick, onDeviceDoubleClick, apiKey }: MapProps) => {
   const center = { lat: 25.0330, lng: 121.5654 };
 
   if (!apiKey) {
@@ -216,6 +223,7 @@ const Map = ({ devices, selectedDevice, onDeviceSelect, onDeviceClick, apiKey }:
             selectedDevice={selectedDevice}
             onDeviceSelect={onDeviceSelect}
             onDeviceClick={onDeviceClick}
+            onDeviceDoubleClick={onDeviceDoubleClick}
           />
         </GoogleMap>
       </APIProvider>
