@@ -55,6 +55,36 @@ export type Database = {
           },
         ]
       }
+      device_alarm_thresholds: {
+        Row: {
+          created_at: string
+          device_id: string
+          enabled: boolean
+          id: string
+          metric_type: string
+          threshold_value: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          enabled?: boolean
+          id?: string
+          metric_type: string
+          threshold_value: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          enabled?: boolean
+          id?: string
+          metric_type?: string
+          threshold_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       device_sensor_history: {
         Row: {
           battery: number | null
