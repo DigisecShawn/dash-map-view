@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Monitor, Search, Key, Bell, Menu, Settings, BarChart3, AlertTriangle, History } from 'lucide-react';
 import Map from '@/components/Map';
@@ -14,70 +14,21 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAlarmMonitor } from '@/hooks/useAlarmMonitor';
+import { supabase } from '@/integrations/supabase/client';
 import cctvNeihu from '@/assets/cctv-neihu.jpg';
 import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
 import cctvXindian from '@/assets/cctv-xindian.jpg';
 import cctvSongshan from '@/assets/cctv-songshan.jpg';
 
-// Mock data for devices - 使用台灣真實座標
-const mockDevices = [
-  {
-    id: 'CAM-001',
-    name: '內湖汙水廠工地',
-    lat: 25.0330,
-    lng: 121.5654,
-    battery: 85,
-    signal: 92,
-    status: 'online' as const,
-    location: '台北市內湖區',
-    cctvImage: cctvNeihu,
-  },
-  {
-    id: 'CAM-002',
-    name: '新莊土地重劃工地',
-    lat: 25.0478,
-    lng: 121.5318,
-    battery: 45,
-    signal: 78,
-    status: 'online' as const,
-    location: '新北市新莊區',
-    cctvImage: cctvXinzhuang,
-  },
-  {
-    id: 'CAM-003',
-    name: '板橋車站雙子星工地',
-    lat: 25.0175,
-    lng: 121.4627,
-    battery: 92,
-    signal: 65,
-    status: 'online' as const,
-    location: '新北市板橋區',
-    cctvImage: cctvBanqiao,
-  },
-  {
-    id: 'CAM-004',
-    name: '新店道路拓寬工地',
-    lat: 24.9917,
-    lng: 121.5417,
-    battery: 28,
-    signal: 45,
-    status: 'offline' as const,
-    location: '新北市新店區',
-    cctvImage: cctvXindian,
-  },
-  {
-    id: 'CAM-005',
-    name: '松山捷運站新建工地',
-    lat: 25.0853,
-    lng: 121.5606,
-    battery: 67,
-    signal: 88,
-    status: 'online' as const,
-    location: '台北市松山區',
-    cctvImage: cctvSongshan,
-  },
-];
+// CCTV images mapping
+const cctvImages: Record<string, string> = {
+  'DEV-001': cctvNeihu,
+  'DEV-002': cctvXinzhuang,
+  'DEV-003': cctvBanqiao,
+  'DEV-004': cctvXindian,
+  'DEV-005': cctvSongshan,
+};
 
 interface Device {
   id: string;
@@ -92,7 +43,8 @@ interface Device {
 }
 
 const Index = () => {
-  const [devices, setDevices] = useState<Device[]>(mockDevices.map(d => ({ ...d })));
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetails, setShowDetails] = useState(false);
@@ -104,6 +56,52 @@ const Index = () => {
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeAlarms, setActiveAlarms] = useState<number>(0);
+
+  // Fetch devices from database
+  const fetchDevices = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('devices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mappedDevices: Device[] = (data || []).map(d => ({
+        id: d.device_id,
+        name: d.name,
+        lat: Number(d.lat),
+        lng: Number(d.lng),
+        battery: d.battery || 0,
+        signal: d.signal_strength || 0,
+        status: d.status === 'online' ? 'online' : 'offline',
+        location: d.location || '',
+        cctvImage: cctvImages[d.device_id] || cctvNeihu,
+      }));
+
+      setDevices(mappedDevices);
+    } catch (error) {
+      console.error('Error fetching devices:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDevices();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel('devices-index-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'devices' }, () => {
+        fetchDevices();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchDevices]);
 
   // Alarm monitoring hook
   const handleAlarmTriggered = useCallback((violations: { device_id: string }[]) => {
@@ -155,16 +153,24 @@ const Index = () => {
             className="pl-10 bg-secondary border-border"
           />
         </div>
-        <div className="space-y-3">
-          {filteredDevices.map((device) => (
-            <DeviceCard
-              key={device.id}
-              {...device}
-              isSelected={selectedDevice === device.id}
-              onClick={() => handleDeviceClick(device.id)}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">載入中...</div>
+        ) : filteredDevices.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            {searchQuery ? '找不到符合的設備' : '尚無設備，請至設備管理新增'}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredDevices.map((device) => (
+              <DeviceCard
+                key={device.id}
+                {...device}
+                isSelected={selectedDevice === device.id}
+                onClick={() => handleDeviceClick(device.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
