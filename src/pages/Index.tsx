@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Monitor, Search, Key, Bell, Menu, Settings, BarChart3 } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Monitor, Search, Key, Bell, Menu, Settings, BarChart3, AlertTriangle } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
@@ -10,7 +10,9 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useAlarmMonitor } from '@/hooks/useAlarmMonitor';
 import cctvNeihu from '@/assets/cctv-neihu.jpg';
 import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
@@ -100,6 +102,18 @@ const Index = () => {
   const [tempApiKey, setTempApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeAlarms, setActiveAlarms] = useState<number>(0);
+
+  // Alarm monitoring hook
+  const handleAlarmTriggered = useCallback((violations: { device_id: string }[]) => {
+    setActiveAlarms(violations.length);
+  }, []);
+
+  const { checkAlarms } = useAlarmMonitor({
+    enabled: true,
+    checkInterval: 60000, // Check every minute
+    onAlarmTriggered: handleAlarmTriggered,
+  });
 
 
   const selectedDeviceData = devices.find(d => d.id === selectedDevice) || null;
@@ -212,15 +226,34 @@ const Index = () => {
                 <span className="hidden sm:inline">設備管理</span>
               </Button>
 
-              {/* Notification Button - Icon only on mobile */}
+              {/* Notification/Alarm Button */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowNotificationSettings(true)}
-                className="gap-1 sm:gap-2 px-2 sm:px-3"
+                className="gap-1 sm:gap-2 px-2 sm:px-3 relative"
               >
                 <Bell className="w-4 h-4" />
                 <span className="hidden sm:inline">通知設定</span>
+                {activeAlarms > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] animate-pulse"
+                  >
+                    {activeAlarms}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* Manual Alarm Check Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => checkAlarms()}
+                title="立即檢查警報"
+                className="text-warning hover:text-warning"
+              >
+                <AlertTriangle className="w-4 h-4" />
               </Button>
 
               {/* API Key Button - Hidden on mobile */}
