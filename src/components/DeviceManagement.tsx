@@ -56,7 +56,7 @@ const ALARM_METRICS: { value: string; label: string; unit: string; Icon: LucideI
 
 // Camera icon types configuration
 const CAMERA_ICON_TYPES: { value: string; label: string; Icon: LucideIcon }[] = [
-  { value: 'video', label: '錄影機', Icon: Video },
+  { value: 'video', label: 'CCTV', Icon: Video },
   { value: 'cctv', label: 'CCTV', Icon: Cctv },
   { value: 'webcam', label: '網路攝影機', Icon: Webcam },
   { value: 'dome', label: '球型攝影機', Icon: ScanEye },
