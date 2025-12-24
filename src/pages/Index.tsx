@@ -1,31 +1,25 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Monitor, Search, Bell, Menu, Settings, BarChart3, AlertTriangle, History, Shield, LogOut, User } from 'lucide-react';
+import { Monitor, Search, Bell, Menu, Settings, BarChart3, AlertTriangle, History } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import NotificationSettings from '@/components/NotificationSettings';
 import DeviceManagement from '@/components/DeviceManagement';
 import TrendChartsMenu from '@/components/TrendChartsMenu';
-import FeatureGate from '@/components/FeatureGate';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAlarmMonitor } from '@/hooks/useAlarmMonitor';
-import { useAuth } from '@/hooks/useAuth';
-import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import cctvNeihu from '@/assets/cctv-neihu.jpg';
 import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
 import cctvXindian from '@/assets/cctv-xindian.jpg';
 import cctvSongshan from '@/assets/cctv-songshan.jpg';
 
-// CCTV images mapping
 const cctvImages: Record<string, string> = {
   'DEV-001': cctvNeihu,
   'DEV-002': cctvXinzhuang,
@@ -46,17 +40,7 @@ interface Device {
   cctvImage: string;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: '管理員',
-  operator: '操作員',
-  viewer: '訪客',
-};
-
 const Index = () => {
-  const { user, signOut } = useAuth();
-  const { role } = usePermissions();
-  const { toast } = useToast();
-  
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
@@ -69,7 +53,6 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeAlarms, setActiveAlarms] = useState<number>(0);
 
-  // Fetch devices from database
   const fetchDevices = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -102,7 +85,6 @@ const Index = () => {
   useEffect(() => {
     fetchDevices();
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel('devices-index-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'devices' }, () => {
@@ -115,7 +97,6 @@ const Index = () => {
     };
   }, [fetchDevices]);
 
-  // Alarm monitoring hook
   const handleAlarmTriggered = useCallback((violations: { device_id: string }[]) => {
     setActiveAlarms(violations.length);
   }, []);
@@ -183,13 +164,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card shadow-card sticky top-0 z-40">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2">
-            {/* Left: Menu + Logo */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Mobile Menu Button */}
               <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="lg:hidden">
@@ -213,87 +191,59 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Right: Actions */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
               <ThemeToggle />
               
-              {/* Trend Charts Button */}
-              <FeatureGate feature="trend_charts">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTrendCharts(true)}
+                className="gap-1 sm:gap-2 px-2 sm:px-3"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">趨勢圖</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeviceManagement(true)}
+                className="gap-1 sm:gap-2 px-2 sm:px-3"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">設備管理</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNotificationSettings(true)}
+                className="gap-1 sm:gap-2 px-2 sm:px-3 relative"
+              >
+                <Bell className="w-4 h-4" />
+                <span className="hidden sm:inline">通知設定</span>
+                {activeAlarms > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] animate-pulse"
+                  >
+                    {activeAlarms}
+                  </Badge>
+                )}
+              </Button>
+
+              <Link to="/alarm-history">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowTrendCharts(true)}
+                  title="警報歷史紀錄"
                   className="gap-1 sm:gap-2 px-2 sm:px-3"
                 >
-                  <BarChart3 className="w-4 h-4" />
-                  <span className="hidden sm:inline">趨勢圖</span>
+                  <History className="w-4 h-4" />
+                  <span className="hidden sm:inline">警報歷史</span>
                 </Button>
-              </FeatureGate>
+              </Link>
 
-              {/* Device Management Button */}
-              <FeatureGate feature="device_management">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDeviceManagement(true)}
-                  className="gap-1 sm:gap-2 px-2 sm:px-3"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span className="hidden sm:inline">設備管理</span>
-                </Button>
-              </FeatureGate>
-
-              {/* Notification/Alarm Button */}
-              <FeatureGate feature="notification_settings">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowNotificationSettings(true)}
-                  className="gap-1 sm:gap-2 px-2 sm:px-3 relative"
-                >
-                  <Bell className="w-4 h-4" />
-                  <span className="hidden sm:inline">通知設定</span>
-                  {activeAlarms > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] animate-pulse"
-                    >
-                      {activeAlarms}
-                    </Badge>
-                  )}
-                </Button>
-              </FeatureGate>
-
-              {/* Alarm History Link */}
-              <FeatureGate feature="alarm_history">
-                <Link to="/alarm-history">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    title="警報歷史紀錄"
-                    className="gap-1 sm:gap-2 px-2 sm:px-3"
-                  >
-                    <History className="w-4 h-4" />
-                    <span className="hidden sm:inline">警報歷史</span>
-                  </Button>
-                </Link>
-              </FeatureGate>
-
-              {/* Admin Page Link */}
-              <FeatureGate feature="permission_management">
-                <Link to="/admin">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1 sm:gap-2 px-2 sm:px-3"
-                  >
-                    <Shield className="w-4 h-4" />
-                    <span className="hidden sm:inline">系統管理</span>
-                  </Button>
-                </Link>
-              </FeatureGate>
-
-              {/* Manual Alarm Check Button */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -304,33 +254,6 @@ const Index = () => {
                 <AlertTriangle className="w-4 h-4" />
               </Button>
 
-              {/* User Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1 sm:gap-2 px-2 sm:px-3">
-                    <User className="w-4 h-4" />
-                    <span className="hidden sm:inline">{user?.email?.split('@')[0] || '用戶'}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem disabled className="text-muted-foreground">
-                    {role ? ROLE_LABELS[role] || role : '載入中...'}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={async () => {
-                      await signOut();
-                      toast({ title: '已登出' });
-                    }}
-                    className="text-destructive"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    登出
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Online Status */}
               <div className="text-right pl-2 border-l border-border">
                 <div className="text-xs text-muted-foreground hidden sm:block">在線設備</div>
                 <div className="text-lg sm:text-xl font-bold text-success">
@@ -343,12 +266,10 @@ const Index = () => {
       </header>
 
       <div className="flex h-[calc(100vh-65px)] sm:h-[calc(100vh-81px)]">
-        {/* Desktop Sidebar */}
         <aside className="hidden lg:block w-80 border-r border-border bg-card">
           <DeviceList />
         </aside>
 
-        {/* Main Content - Map */}
         <main className="flex-1 relative">
           <div className="h-full p-2 sm:p-4">
             <Map
@@ -361,7 +282,6 @@ const Index = () => {
             />
           </div>
 
-          {/* Device Details Modal */}
           {showDetails && (
             <DeviceDetails
               device={selectedDeviceData}
@@ -369,21 +289,18 @@ const Index = () => {
             />
           )}
 
-          {/* Notification Settings Modal */}
           {showNotificationSettings && (
             <NotificationSettings
               onClose={() => setShowNotificationSettings(false)}
             />
           )}
 
-          {/* Device Management Modal */}
           {showDeviceManagement && (
             <DeviceManagement
               onClose={() => setShowDeviceManagement(false)}
             />
           )}
 
-          {/* Trend Charts Modal */}
           {showTrendCharts && (
             <TrendChartsMenu
               onClose={() => setShowTrendCharts(false)}

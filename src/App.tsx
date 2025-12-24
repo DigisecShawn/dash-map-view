@@ -4,11 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import AdminRoute from "@/components/AdminRoute";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
 import AlarmHistory from "./pages/AlarmHistory";
 import NotFound from "./pages/NotFound";
 
@@ -22,22 +18,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <AdminRoute>
-                <Admin />
-              </AdminRoute>
-            } />
-            <Route path="/alarm-history" element={
-              <ProtectedRoute>
-                <AlarmHistory />
-              </ProtectedRoute>
-            } />
+            <Route path="/" element={<Index />} />
+            <Route path="/alarm-history" element={<AlarmHistory />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
