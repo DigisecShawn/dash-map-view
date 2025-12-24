@@ -244,15 +244,6 @@ const Index = () => {
                 </Button>
               </Link>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => checkAlarms()}
-                title="立即檢查警報"
-                className="text-warning hover:text-warning px-2 sm:px-3"
-              >
-                <span className="hidden sm:inline">檢查警報</span>
-              </Button>
 
               <div className="text-right pl-2 border-l border-border">
                 <div className="text-xs text-muted-foreground hidden sm:block">在線設備</div>
