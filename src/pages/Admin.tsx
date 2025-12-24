@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Shield, Users, Plus, ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { usePermissions, AppRole } from '@/hooks/usePermissions';
+import { AppRole } from '@/hooks/usePermissions';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
@@ -64,9 +64,7 @@ const passwordSchema = z.string().min(6, '密碼至少需要 6 個字元');
 const usernameToEmail = (username: string) => `${username.toLowerCase()}@iot-monitor.local`;
 
 const AdminPage = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAdmin, loading: permLoading } = usePermissions();
   const { toast } = useToast();
 
   const [permissions, setPermissions] = useState<FeaturePermission[]>([]);
@@ -83,17 +81,7 @@ const AdminPage = () => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  // Redirect if not admin
-  useEffect(() => {
-    if (!permLoading && !isAdmin) {
-      toast({
-        title: '權限不足',
-        description: '只有管理員可以存取此頁面',
-        variant: 'destructive',
-      });
-      navigate('/');
-    }
-  }, [isAdmin, permLoading, navigate, toast]);
+  // AdminRoute already handles admin check, just fetch data
 
   const fetchData = async () => {
     setLoading(true);
@@ -148,10 +136,8 @@ const AdminPage = () => {
   };
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchData();
-    }
-  }, [isAdmin]);
+    fetchData();
+  }, []);
 
   const handlePermissionToggle = async (permissionId: string, enabled: boolean) => {
     setSaving(true);
@@ -340,16 +326,12 @@ const AdminPage = () => {
     return email.replace('@iot-monitor.local', '');
   };
 
-  if (permLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
-  }
-
-  if (!isAdmin) {
-    return null;
   }
 
   return (
