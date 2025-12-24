@@ -246,12 +246,12 @@ const Index = () => {
 
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={() => checkAlarms()}
                 title="立即檢查警報"
-                className="text-warning hover:text-warning"
+                className="text-warning hover:text-warning px-2 sm:px-3"
               >
-                <AlertTriangle className="w-4 h-4" />
+                <span className="hidden sm:inline">檢查警報</span>
               </Button>
 
               <div className="text-right pl-2 border-l border-border">
