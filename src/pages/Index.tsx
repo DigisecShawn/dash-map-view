@@ -7,7 +7,7 @@ import DeviceDetails from '@/components/DeviceDetails';
 import NotificationSettings from '@/components/NotificationSettings';
 import DeviceManagement from '@/components/DeviceManagement';
 import TrendChartsMenu from '@/components/TrendChartsMenu';
-import PermissionManagement from '@/components/PermissionManagement';
+
 import FeatureGate from '@/components/FeatureGate';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
@@ -60,7 +60,7 @@ const Index = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showDeviceManagement, setShowDeviceManagement] = useState(false);
-  const [showPermissionManagement, setShowPermissionManagement] = useState(false);
+  
   const [showTrendCharts, setShowTrendCharts] = useState(false);
   const apiKey = 'AIzaSyCPvsAfPyv9yhjaJDwD5SnkYiuQY9WkIYk';
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -277,17 +277,18 @@ const Index = () => {
                 </Link>
               </FeatureGate>
 
-              {/* Permission Management Button - requires permission_management permission */}
+              {/* Admin Page Link - requires permission_management permission */}
               <FeatureGate feature="permission_management">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPermissionManagement(true)}
-                  className="gap-1 sm:gap-2 px-2 sm:px-3"
-                >
-                  <Shield className="w-4 h-4" />
-                  <span className="hidden sm:inline">權限管理</span>
-                </Button>
+                <Link to="/admin">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 sm:gap-2 px-2 sm:px-3"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span className="hidden sm:inline">系統管理</span>
+                  </Button>
+                </Link>
               </FeatureGate>
 
               {/* Manual Alarm Check Button */}
@@ -387,12 +388,6 @@ const Index = () => {
             />
           )}
 
-          {/* Permission Management Modal */}
-          {showPermissionManagement && (
-            <PermissionManagement
-              onClose={() => setShowPermissionManagement(false)}
-            />
-          )}
 
         </main>
       </div>
