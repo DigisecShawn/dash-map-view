@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { Monitor, Lock, User, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -11,8 +11,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
-const emailSchema = z.string().email('請輸入有效的電子郵件');
+const usernameSchema = z.string()
+  .min(3, '帳號至少需要 3 個字元')
+  .max(20, '帳號最多 20 個字元')
+  .regex(/^[a-zA-Z0-9_]+$/, '帳號只能包含英文字母、數字和底線');
 const passwordSchema = z.string().min(6, '密碼至少需要 6 個字元');
+
+// Convert username to pseudo-email for Supabase Auth
+const usernameToEmail = (username: string) => `${username.toLowerCase()}@iot-monitor.local`;
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -23,7 +29,7 @@ const Auth = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Form states
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
 
@@ -36,7 +42,7 @@ const Auth = () => {
 
   const validateForm = () => {
     try {
-      emailSchema.parse(email);
+      usernameSchema.parse(username);
       passwordSchema.parse(password);
       return true;
     } catch (err) {
@@ -54,12 +60,13 @@ const Auth = () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
+    const email = usernameToEmail(username);
     const { error: signInError } = await signIn(email, password);
     setIsSubmitting(false);
 
     if (signInError) {
       if (signInError.message.includes('Invalid login credentials')) {
-        setError('電子郵件或密碼錯誤');
+        setError('帳號或密碼錯誤');
       } else {
         setError(signInError.message);
       }
@@ -80,12 +87,13 @@ const Auth = () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    const { error: signUpError } = await signUp(email, password, displayName);
+    const email = usernameToEmail(username);
+    const { error: signUpError } = await signUp(email, password, displayName || username);
     setIsSubmitting(false);
 
     if (signUpError) {
       if (signUpError.message.includes('User already registered')) {
-        setError('此電子郵件已被註冊');
+        setError('此帳號已被註冊');
       } else {
         setError(signUpError.message);
       }
@@ -137,15 +145,15 @@ const Auth = () => {
           <TabsContent value="login">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-email">電子郵件</Label>
+                <Label htmlFor="login-username">帳號</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="login-username"
+                    type="text"
+                    placeholder="請輸入帳號"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     className="pl-10"
                     required
                   />
@@ -181,34 +189,31 @@ const Auth = () => {
           <TabsContent value="signup">
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signup-name">顯示名稱</Label>
+                <Label htmlFor="signup-username">帳號</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    id="signup-name"
+                    id="signup-username"
                     type="text"
-                    placeholder="您的名稱"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">電子郵件</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="英文字母、數字、底線 (3-20字元)"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     className="pl-10"
                     required
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">只能使用英文字母、數字和底線</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-name">顯示名稱 (選填)</Label>
+                <Input
+                  id="signup-name"
+                  type="text"
+                  placeholder="您的名稱"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
               </div>
 
               <div className="space-y-2">
