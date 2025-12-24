@@ -1,19 +1,24 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Monitor, Search, Bell, Menu, Settings, BarChart3, AlertTriangle, History } from 'lucide-react';
+import { Monitor, Search, Bell, Menu, Settings, BarChart3, AlertTriangle, History, Shield, LogOut, User } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import NotificationSettings from '@/components/NotificationSettings';
 import DeviceManagement from '@/components/DeviceManagement';
 import TrendChartsMenu from '@/components/TrendChartsMenu';
+import FeatureGate from '@/components/FeatureGate';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAlarmMonitor } from '@/hooks/useAlarmMonitor';
+import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import cctvNeihu from '@/assets/cctv-neihu.jpg';
 import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
@@ -41,7 +46,17 @@ interface Device {
   cctvImage: string;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  admin: '管理員',
+  operator: '操作員',
+  viewer: '訪客',
+};
+
 const Index = () => {
+  const { user, signOut } = useAuth();
+  const { role } = usePermissions();
+  const { toast } = useToast();
+  
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
@@ -107,7 +122,7 @@ const Index = () => {
 
   const { checkAlarms } = useAlarmMonitor({
     enabled: true,
-    checkInterval: 60000, // Check every minute
+    checkInterval: 60000,
     onAlarmTriggered: handleAlarmTriggered,
   });
 
@@ -203,58 +218,80 @@ const Index = () => {
               <ThemeToggle />
               
               {/* Trend Charts Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowTrendCharts(true)}
-                className="gap-1 sm:gap-2 px-2 sm:px-3"
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline">趨勢圖</span>
-              </Button>
-
-              {/* Device Management Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDeviceManagement(true)}
-                className="gap-1 sm:gap-2 px-2 sm:px-3"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">設備管理</span>
-              </Button>
-
-              {/* Notification/Alarm Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowNotificationSettings(true)}
-                className="gap-1 sm:gap-2 px-2 sm:px-3 relative"
-              >
-                <Bell className="w-4 h-4" />
-                <span className="hidden sm:inline">通知設定</span>
-                {activeAlarms > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] animate-pulse"
-                  >
-                    {activeAlarms}
-                  </Badge>
-                )}
-              </Button>
-
-              {/* Alarm History Link */}
-              <Link to="/alarm-history">
+              <FeatureGate feature="trend_charts">
                 <Button
                   variant="outline"
                   size="sm"
-                  title="警報歷史紀錄"
+                  onClick={() => setShowTrendCharts(true)}
                   className="gap-1 sm:gap-2 px-2 sm:px-3"
                 >
-                  <History className="w-4 h-4" />
-                  <span className="hidden sm:inline">警報歷史</span>
+                  <BarChart3 className="w-4 h-4" />
+                  <span className="hidden sm:inline">趨勢圖</span>
                 </Button>
-              </Link>
+              </FeatureGate>
+
+              {/* Device Management Button */}
+              <FeatureGate feature="device_management">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDeviceManagement(true)}
+                  className="gap-1 sm:gap-2 px-2 sm:px-3"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">設備管理</span>
+                </Button>
+              </FeatureGate>
+
+              {/* Notification/Alarm Button */}
+              <FeatureGate feature="notification_settings">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNotificationSettings(true)}
+                  className="gap-1 sm:gap-2 px-2 sm:px-3 relative"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span className="hidden sm:inline">通知設定</span>
+                  {activeAlarms > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] animate-pulse"
+                    >
+                      {activeAlarms}
+                    </Badge>
+                  )}
+                </Button>
+              </FeatureGate>
+
+              {/* Alarm History Link */}
+              <FeatureGate feature="alarm_history">
+                <Link to="/alarm-history">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    title="警報歷史紀錄"
+                    className="gap-1 sm:gap-2 px-2 sm:px-3"
+                  >
+                    <History className="w-4 h-4" />
+                    <span className="hidden sm:inline">警報歷史</span>
+                  </Button>
+                </Link>
+              </FeatureGate>
+
+              {/* Admin Page Link */}
+              <FeatureGate feature="permission_management">
+                <Link to="/admin">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 sm:gap-2 px-2 sm:px-3"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span className="hidden sm:inline">系統管理</span>
+                  </Button>
+                </Link>
+              </FeatureGate>
 
               {/* Manual Alarm Check Button */}
               <Button
@@ -266,6 +303,32 @@ const Index = () => {
               >
                 <AlertTriangle className="w-4 h-4" />
               </Button>
+
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1 sm:gap-2 px-2 sm:px-3">
+                    <User className="w-4 h-4" />
+                    <span className="hidden sm:inline">{user?.email?.split('@')[0] || '用戶'}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem disabled className="text-muted-foreground">
+                    {role ? ROLE_LABELS[role] || role : '載入中...'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={async () => {
+                      await signOut();
+                      toast({ title: '已登出' });
+                    }}
+                    className="text-destructive"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    登出
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* Online Status */}
               <div className="text-right pl-2 border-l border-border">
