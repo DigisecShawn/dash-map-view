@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Monitor, Search, Bell, Menu, Settings, BarChart3, AlertTriangle, History } from 'lucide-react';
+import { Monitor, Search, Bell, Menu, Settings, BarChart3, AlertTriangle, History, LayoutDashboard } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
@@ -193,6 +193,17 @@ const Index = () => {
 
             <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
               <ThemeToggle />
+
+              <Link to="/dashboard">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 sm:gap-2 px-2 sm:px-3"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span className="hidden sm:inline">儀表板</span>
+                </Button>
+              </Link>
               
               <Button
                 variant="outline"
