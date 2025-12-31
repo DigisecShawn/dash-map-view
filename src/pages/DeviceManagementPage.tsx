@@ -90,8 +90,6 @@ const DeviceManagementPage = () => {
     site_id: '',
     device_id: '',
     name: '',
-    lat: '',
-    lng: '',
     location: '',
     mqtt_topic: '',
   });
@@ -149,7 +147,7 @@ const DeviceManagementPage = () => {
       toast.error('請先選擇工地');
       return;
     }
-    if (!newDevice.device_id || !newDevice.name || !newDevice.lat || !newDevice.lng) {
+    if (!newDevice.device_id || !newDevice.name) {
       toast.error('請填寫必要欄位');
       return;
     }
@@ -160,8 +158,8 @@ const DeviceManagementPage = () => {
         site_id: newDevice.site_id,
         device_id: newDevice.device_id,
         name: newDevice.name,
-        lat: parseFloat(newDevice.lat),
-        lng: parseFloat(newDevice.lng),
+        lat: 0,
+        lng: 0,
         location: newDevice.location || null,
         mqtt_topic: newDevice.mqtt_topic || null,
         status: 'offline',
@@ -170,7 +168,7 @@ const DeviceManagementPage = () => {
       if (error) throw error;
 
       toast.success('設備新增成功');
-      setNewDevice({ company_id: '', site_id: '', device_id: '', name: '', lat: '', lng: '', location: '', mqtt_topic: '' });
+      setNewDevice({ company_id: '', site_id: '', device_id: '', name: '', location: '', mqtt_topic: '' });
       setIsAddingDevice(false);
       fetchData();
     } catch (error) {
@@ -187,8 +185,6 @@ const DeviceManagementPage = () => {
         .from('devices')
         .update({
           name: editingDevice.name,
-          lat: editingDevice.lat,
-          lng: editingDevice.lng,
           location: editingDevice.location,
           mqtt_topic: editingDevice.mqtt_topic,
         })
@@ -436,24 +432,6 @@ const DeviceManagementPage = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>緯度 *</Label>
-                        <Input
-                          type="number"
-                          placeholder="25.0330"
-                          value={newDevice.lat}
-                          onChange={e => setNewDevice(prev => ({ ...prev, lat: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>經度 *</Label>
-                        <Input
-                          type="number"
-                          placeholder="121.5654"
-                          value={newDevice.lng}
-                          onChange={e => setNewDevice(prev => ({ ...prev, lng: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
                         <Label>MQTT Topic</Label>
                         <Input
                           placeholder="devices/dev-001"
@@ -468,7 +446,7 @@ const DeviceManagementPage = () => {
                 <div className="flex gap-2 justify-end">
                   <Button variant="outline" onClick={() => {
                     setIsAddingDevice(false);
-                    setNewDevice({ company_id: '', site_id: '', device_id: '', name: '', lat: '', lng: '', location: '', mqtt_topic: '' });
+                    setNewDevice({ company_id: '', site_id: '', device_id: '', name: '', location: '', mqtt_topic: '' });
                   }}>取消</Button>
                   <Button 
                     onClick={handleAddDevice}
@@ -523,12 +501,11 @@ const DeviceManagementPage = () => {
                           {getSiteName(device.site_id)}
                         </Badge>
                       </div>
-                      <div className="text-sm text-muted-foreground space-y-1 mb-3">
+                      <div className="text-sm text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
                           <span>{device.location || '未設定位置'}</span>
                         </div>
-                        <div>座標: {device.lat}, {device.lng}</div>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => setEditingDevice(device)}>
