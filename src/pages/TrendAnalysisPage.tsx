@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Json } from '@/integrations/supabase/types';
 
 interface SensorData {
@@ -180,6 +180,49 @@ const TrendAnalysisPage = () => {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([time, count]) => ({ time, count }));
   }, [filteredWsAlerts, timeRange]);
+
+  // Site alert distribution data (for all alerts, not filtered)
+  const siteAlertDistribution = useMemo(() => {
+    const siteStats: Record<string, { name: string; total: number; error: number; warning: number }> = {};
+    
+    wsAlerts.forEach(alert => {
+      if (!alert.device_id) return;
+      const device = devices.find(d => d.device_id === alert.device_id);
+      const siteName = device?.name || alert.device_name || alert.device_id;
+      
+      if (!siteStats[alert.device_id]) {
+        siteStats[alert.device_id] = { name: siteName, total: 0, error: 0, warning: 0 };
+      }
+      siteStats[alert.device_id].total++;
+      if (alert.severity === 'error') siteStats[alert.device_id].error++;
+      if (alert.severity === 'warning') siteStats[alert.device_id].warning++;
+    });
+
+    return Object.entries(siteStats)
+      .map(([id, stats]) => ({ id, ...stats }))
+      .sort((a, b) => b.total - a.total);
+  }, [wsAlerts, devices]);
+
+  // Site alert pie chart data
+  const sitePieData = useMemo(() => {
+    return siteAlertDistribution.map(site => ({
+      name: site.name.length > 10 ? site.name.substring(0, 10) + '...' : site.name,
+      fullName: site.name,
+      value: site.total,
+    }));
+  }, [siteAlertDistribution]);
+
+  // Alert severity distribution
+  const severityDistribution = useMemo(() => {
+    const errorCount = wsAlerts.filter(a => a.severity === 'error').length;
+    const warningCount = wsAlerts.filter(a => a.severity === 'warning').length;
+    return [
+      { name: '嚴重', value: errorCount, color: 'hsl(var(--destructive))' },
+      { name: '警告', value: warningCount, color: 'hsl(var(--warning))' },
+    ].filter(d => d.value > 0);
+  }, [wsAlerts]);
+
+  const SITE_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1'];
 
   // Trend chart data
   const trendData = useMemo(() => {
@@ -681,6 +724,157 @@ const TrendAnalysisPage = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Site Distribution Charts */}
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {/* Site Alert Bar Chart */}
+            <Card className="xl:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  各工地警報統計
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={siteAlertDistribution} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis type="number" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                      <YAxis 
+                        type="category" 
+                        dataKey="name" 
+                        tick={{ fontSize: 10 }} 
+                        width={120} 
+                        className="text-muted-foreground"
+                        tickFormatter={(value) => value.length > 12 ? value.substring(0, 12) + '...' : value}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number, name: string) => {
+                          const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
+                          return [`${value} 次`, labels[name] || name];
+                        }}
+                      />
+                      <Legend 
+                        formatter={(value) => {
+                          const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
+                          return labels[value] || value;
+                        }}
+                      />
+                      <Bar dataKey="error" stackId="a" fill="hsl(var(--destructive))" name="error" />
+                      <Bar dataKey="warning" stackId="a" fill="hsl(var(--warning))" name="warning" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Site Alert Pie Chart */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-purple-500" />
+                  工地警報佔比
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={sitePieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        paddingAngle={2}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {sitePieData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number, _: string, props: any) => [
+                          `${value} 次警報`,
+                          props.payload.fullName
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Severity Distribution */}
+          {severityDistribution.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-500" />
+                  警報嚴重程度分佈
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-8 justify-center py-4">
+                  <div className="w-48 h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={severityDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {severityDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                          formatter={(value: number) => [`${value} 次`, '警報次數']}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-4">
+                    {severityDistribution.map((item, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div 
+                          className="w-4 h-4 rounded" 
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <div>
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-2xl font-bold">{item.value} 次</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>
