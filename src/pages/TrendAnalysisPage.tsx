@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert, Building2, MapPin, ChevronRight
+  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert, Building2, MapPin, ChevronRight, Sun, Zap
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ interface SensorData {
   pm25: number | null;
   pm10: number | null;
   noise: number | null;
+  solar_power: number | null;
   recorded_at: string;
 }
 
@@ -278,6 +279,7 @@ const TrendAnalysisPage = () => {
         const humids = records.map(r => r.humidity).filter(v => v !== null) as number[];
         const pm10s = records.map(r => r.pm10).filter(v => v !== null) as number[];
         const noises = records.map(r => r.noise).filter(v => v !== null) as number[];
+        const solars = records.map(r => r.solar_power).filter(v => v !== null) as number[];
         return {
           time,
           temperature: temps.length > 0 ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length * 10) / 10 : null,
@@ -285,6 +287,7 @@ const TrendAnalysisPage = () => {
           humidity: humids.length > 0 ? Math.round(humids.reduce((a, b) => a + b, 0) / humids.length * 10) / 10 : null,
           pm10: pm10s.length > 0 ? Math.round(pm10s.reduce((a, b) => a + b, 0) / pm10s.length * 10) / 10 : null,
           noise: noises.length > 0 ? Math.round(noises.reduce((a, b) => a + b, 0) / noises.length * 10) / 10 : null,
+          solar: solars.length > 0 ? Math.round(solars.reduce((a, b) => a + b, 0) / solars.length * 10) / 10 : null,
         };
       });
   }, [filteredSensorData, timeRange]);
@@ -385,126 +388,143 @@ const TrendAnalysisPage = () => {
         </Badge>
       </div>
 
-      {/* Environment Stats */}
-      {envStats ? (
+      {/* AI Detection Alert Statistics - MOVED TO TOP */}
+      {filteredWsAlerts.length > 0 && (
+        <>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-destructive" />
+                AI 偵測警報統計
+                <Badge variant="outline" className="ml-auto text-xs">
+                  {filteredWsAlerts.length} 筆警報
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {wsAlertStats.map(stat => (
+                  <div key={stat.type} className="p-3 bg-gradient-to-br from-destructive/10 to-orange-500/10 rounded-lg border border-destructive/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-4 h-4 text-destructive" />
+                      <span className="text-sm font-medium truncate">{stat.label}</span>
+                    </div>
+                    <div className="text-2xl font-bold text-destructive">{stat.count}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Alert Trend Chart */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-destructive" />
+                  AI 偵測警報趨勢
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={wsAlertTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                      <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number) => [`${value} 次`, '警報次數']}
+                      />
+                      <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Alert Type Distribution */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-warning" />
+                  警報類型分佈
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={wsAlertStats} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis type="number" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                      <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={80} className="text-muted-foreground" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number) => [`${value} 次`, '次數']}
+                      />
+                      <Bar dataKey="count" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* Solar Power Trend Chart */}
+      {trendData.length > 0 && trendData.some(d => d.solar !== null) && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              {getTimeRangeLabel()}環境監測統計
-              <Badge variant="outline" className="ml-auto text-xs">
-                {envStats.dataCount} 筆資料
-              </Badge>
+              <Sun className="w-4 h-4 text-yellow-500" />
+              太陽能發電趨勢
+              <div className="ml-auto flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5 bg-yellow-500 rounded" />
+                  <span className="text-muted-foreground">發電量 (kW)</span>
+                </div>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {envStats.temperature && (
-                <div className="p-3 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Thermometer className="w-4 h-4 text-orange-500" />
-                    <span className="text-sm font-medium">溫度</span>
-                  </div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">平均</span>
-                      <span className="font-medium">{envStats.temperature.avg}°C</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">範圍</span>
-                      <span>{envStats.temperature.min} ~ {envStats.temperature.max}°C</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {envStats.humidity && (
-                <div className="p-3 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-lg border border-cyan-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Droplets className="w-4 h-4 text-cyan-500" />
-                    <span className="text-sm font-medium">濕度</span>
-                  </div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">平均</span>
-                      <span className="font-medium">{envStats.humidity.avg}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">範圍</span>
-                      <span>{envStats.humidity.min} ~ {envStats.humidity.max}%</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {envStats.pm25 && (
-                <div className="p-3 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Wind className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm font-medium">PM2.5</span>
-                  </div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">平均</span>
-                      <span className="font-medium">{envStats.pm25.avg} μg/m³</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">範圍</span>
-                      <span>{envStats.pm25.min} ~ {envStats.pm25.max}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {envStats.pm10 && (
-                <div className="p-3 bg-gradient-to-br from-green-500/10 to-teal-500/10 rounded-lg border border-green-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Wind className="w-4 h-4 text-green-500" />
-                    <span className="text-sm font-medium">PM10</span>
-                  </div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">平均</span>
-                      <span className="font-medium">{envStats.pm10.avg} μg/m³</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">範圍</span>
-                      <span>{envStats.pm10.min} ~ {envStats.pm10.max}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {envStats.noise && (
-                <div className="p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Volume2 className="w-4 h-4 text-purple-500" />
-                    <span className="text-sm font-medium">噪音</span>
-                  </div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">平均</span>
-                      <span className="font-medium">{envStats.noise.avg} dB</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">範圍</span>
-                      <span>{envStats.noise.min} ~ {envStats.noise.max} dB</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#eab308" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#eab308" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                  <YAxis tick={{ fontSize: 10 }} unit=" kW" className="text-muted-foreground" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number) => [`${value} kW`, '發電量']}
+                  />
+                  <Area type="monotone" dataKey="solar" stroke="#eab308" fill="url(#solarGradient)" strokeWidth={2} name="solar" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            <p>所選設備目前沒有數據</p>
           </CardContent>
         </Card>
       )}
 
-      {/* Trend Charts */}
+      {/* Environment Trend Charts */}
       {trendData.length > 0 ? (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
           <Card>
@@ -657,191 +677,100 @@ const TrendAnalysisPage = () => {
         </Card>
       )}
 
-      {/* AI Detection Alert Statistics */}
+      {/* Site Distribution Charts - Only show if there are alerts */}
       {filteredWsAlerts.length > 0 && (
-        <>
-          <Card>
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Site Alert Bar Chart */}
+          <Card className="xl:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-destructive" />
-                AI 偵測警報統計
-                <Badge variant="outline" className="ml-auto text-xs">
-                  {filteredWsAlerts.length} 筆警報
-                </Badge>
+                <BarChart3 className="w-4 h-4 text-primary" />
+                各工地警報統計
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {wsAlertStats.map(stat => (
-                  <div key={stat.type} className="p-3 bg-gradient-to-br from-destructive/10 to-orange-500/10 rounded-lg border border-destructive/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-destructive" />
-                      <span className="text-sm font-medium truncate">{stat.label}</span>
-                    </div>
-                    <div className="text-2xl font-bold text-destructive">{stat.count}</div>
-                  </div>
-                ))}
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={siteAlertDistribution} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis type="number" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                    <YAxis 
+                      type="category" 
+                      dataKey="name" 
+                      tick={{ fontSize: 10 }} 
+                      width={120} 
+                      className="text-muted-foreground"
+                      tickFormatter={(value) => value.length > 12 ? value.substring(0, 12) + '...' : value}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value: number, name: string) => {
+                        const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
+                        return [`${value} 次`, labels[name] || name];
+                      }}
+                    />
+                    <Legend 
+                      formatter={(value) => {
+                        const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
+                        return labels[value] || value;
+                      }}
+                    />
+                    <Bar dataKey="error" stackId="a" fill="hsl(var(--destructive))" name="error" />
+                    <Bar dataKey="warning" stackId="a" fill="hsl(var(--warning))" name="warning" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Alert Trend Chart */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-destructive" />
-                  AI 偵測警報趨勢
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={wsAlertTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                      <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number) => [`${value} 次`, '警報次數']}
-                      />
-                      <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Alert Type Distribution */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-warning" />
-                  警報類型分佈
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={wsAlertStats} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis type="number" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                      <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={80} className="text-muted-foreground" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number) => [`${value} 次`, '次數']}
-                      />
-                      <Bar dataKey="count" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Site Distribution Charts */}
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {/* Site Alert Bar Chart */}
-            <Card className="xl:col-span-2">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-primary" />
-                  各工地警報統計
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={siteAlertDistribution} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis type="number" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                      <YAxis 
-                        type="category" 
-                        dataKey="name" 
-                        tick={{ fontSize: 10 }} 
-                        width={120} 
-                        className="text-muted-foreground"
-                        tickFormatter={(value) => value.length > 12 ? value.substring(0, 12) + '...' : value}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number, name: string) => {
-                          const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
-                          return [`${value} 次`, labels[name] || name];
-                        }}
-                      />
-                      <Legend 
-                        formatter={(value) => {
-                          const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
-                          return labels[value] || value;
-                        }}
-                      />
-                      <Bar dataKey="error" stackId="a" fill="hsl(var(--destructive))" name="error" />
-                      <Bar dataKey="warning" stackId="a" fill="hsl(var(--warning))" name="warning" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Site Alert Pie Chart */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-purple-500" />
-                  工地警報佔比
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={sitePieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={70}
-                        paddingAngle={2}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {sitePieData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number, _: string, props: any) => [
-                          `${value} 次警報`,
-                          props.payload.fullName
-                        ]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-        </>
+          {/* Site Alert Pie Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-purple-500" />
+                工地警報佔比
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sitePieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {sitePieData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value: number, _: string, props: any) => [
+                        `${value} 次警報`,
+                        props.payload.fullName
+                      ]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
