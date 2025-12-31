@@ -212,15 +212,6 @@ const TrendAnalysisPage = () => {
     }));
   }, [siteAlertDistribution]);
 
-  // Alert severity distribution
-  const severityDistribution = useMemo(() => {
-    const errorCount = wsAlerts.filter(a => a.severity === 'error').length;
-    const warningCount = wsAlerts.filter(a => a.severity === 'warning').length;
-    return [
-      { name: '嚴重', value: errorCount, color: 'hsl(var(--destructive))' },
-      { name: '警告', value: warningCount, color: 'hsl(var(--warning))' },
-    ].filter(d => d.value > 0);
-  }, [wsAlerts]);
 
   const SITE_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1'];
 
@@ -791,62 +782,6 @@ const TrendAnalysisPage = () => {
             </Card>
           </div>
 
-          {/* Severity Distribution */}
-          {severityDistribution.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-orange-500" />
-                  警報嚴重程度分佈
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-8 justify-center py-4">
-                  <div className="w-48 h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={severityDistribution}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
-                          paddingAngle={3}
-                          dataKey="value"
-                        >
-                          {severityDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                          }}
-                          formatter={(value: number) => [`${value} 次`, '警報次數']}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="space-y-4">
-                    {severityDistribution.map((item, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <div 
-                          className="w-4 h-4 rounded" 
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-2xl font-bold">{item.value} 次</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </>
       )}
     </div>
