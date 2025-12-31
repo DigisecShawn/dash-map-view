@@ -201,9 +201,8 @@ const Dashboard = () => {
         <p className="text-muted-foreground">即時設備監控與環境數據總覽</p>
       </div>
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Device Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Device Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -251,314 +250,313 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
+      </div>
 
-        {/* Device Status & Active Alarms */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Device Status Pie */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="w-4 h-4 text-primary" />
-                設備狀態分佈
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-6">
-                <div className="w-32 h-32">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={30}
-                        outerRadius={50}
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="space-y-3 flex-1">
-                  <div>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">平均電量</span>
-                      <span className="font-medium">{deviceStats.avgBattery}%</span>
-                    </div>
-                    <Progress value={deviceStats.avgBattery} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">平均訊號</span>
-                      <span className="font-medium">{deviceStats.avgSignal}%</span>
-                    </div>
-                    <Progress value={deviceStats.avgSignal} className="h-2" />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Active Alarms */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-warning" />
-                活動警報
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {activeAlarms.length === 0 ? (
-                <div className="flex items-center justify-center h-24 text-muted-foreground">
-                  <p>目前沒有活動警報</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {activeAlarms.slice(0, 5).map((alarm, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg border border-destructive/20">
-                      <div>
-                        <p className="text-sm font-medium">{alarm.device}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {getMetricLabel(alarm.metric)}: {alarm.value}{getMetricUnit(alarm.metric)} &gt; {alarm.threshold}{getMetricUnit(alarm.metric)}
-                        </p>
-                      </div>
-                      <Badge variant="destructive" className="text-[10px]">超標</Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Environment Stats */}
-        {envStats && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                24 小時環境監測統計
-                <Badge variant="outline" className="ml-auto text-xs">
-                  {envStats.dataCount} 筆資料
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {envStats.temperature && (
-                  <div className="p-3 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Thermometer className="w-4 h-4 text-orange-500" />
-                      <span className="text-sm font-medium">溫度</span>
-                    </div>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">平均</span>
-                        <span className="font-medium">{envStats.temperature.avg}°C</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">範圍</span>
-                        <span>{envStats.temperature.min} ~ {envStats.temperature.max}°C</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {envStats.humidity && (
-                  <div className="p-3 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-lg border border-cyan-500/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Droplets className="w-4 h-4 text-cyan-500" />
-                      <span className="text-sm font-medium">濕度</span>
-                    </div>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">平均</span>
-                        <span className="font-medium">{envStats.humidity.avg}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">範圍</span>
-                        <span>{envStats.humidity.min} ~ {envStats.humidity.max}%</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {envStats.pm25 && (
-                  <div className="p-3 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Wind className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm font-medium">PM2.5</span>
-                    </div>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">平均</span>
-                        <span className="font-medium">{envStats.pm25.avg} μg/m³</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">範圍</span>
-                        <span>{envStats.pm25.min} ~ {envStats.pm25.max}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {envStats.pm10 && (
-                  <div className="p-3 bg-gradient-to-br from-green-500/10 to-teal-500/10 rounded-lg border border-green-500/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Wind className="w-4 h-4 text-green-500" />
-                      <span className="text-sm font-medium">PM10</span>
-                    </div>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">平均</span>
-                        <span className="font-medium">{envStats.pm10.avg} μg/m³</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">範圍</span>
-                        <span>{envStats.pm10.min} ~ {envStats.pm10.max}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {envStats.noise && (
-                  <div className="p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Volume2 className="w-4 h-4 text-purple-500" />
-                      <span className="text-sm font-medium">噪音</span>
-                    </div>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">平均</span>
-                        <span className="font-medium">{envStats.noise.avg} dB</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">範圍</span>
-                        <span>{envStats.noise.min} ~ {envStats.noise.max} dB</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Trend Charts */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Thermometer className="w-4 h-4 text-orange-500" />
-                溫度趨勢
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData}>
-                    <defs>
-                      <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} unit="°C" className="text-muted-foreground" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Area type="monotone" dataKey="temperature" stroke="#f97316" fill="url(#tempGradient)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Wind className="w-4 h-4 text-blue-500" />
-                PM2.5 趨勢
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData}>
-                    <defs>
-                      <linearGradient id="pm25Gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} unit="μg" className="text-muted-foreground" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Area type="monotone" dataKey="pm25" stroke="#3b82f6" fill="url(#pm25Gradient)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Device List */}
+      {/* Device Status & Active Alarms */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Device Status Pie */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <Monitor className="w-4 h-4 text-primary" />
-              設備清單
+              <Activity className="w-4 h-4 text-primary" />
+              設備狀態分佈
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 text-muted-foreground font-medium">設備名稱</th>
-                    <th className="text-left py-2 text-muted-foreground font-medium">位置</th>
-                    <th className="text-center py-2 text-muted-foreground font-medium">狀態</th>
-                    <th className="text-center py-2 text-muted-foreground font-medium">電量</th>
-                    <th className="text-center py-2 text-muted-foreground font-medium">訊號</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {devices.map(device => (
-                    <tr key={device.id} className="border-b border-border/50 hover:bg-muted/50">
-                      <td className="py-2 font-medium">{device.name}</td>
-                      <td className="py-2 text-muted-foreground">{device.location || '--'}</td>
-                      <td className="py-2 text-center">
-                        <Badge variant={device.status === 'online' ? 'default' : 'secondary'} className="text-xs">
-                          {device.status === 'online' ? '上線' : '離線'}
-                        </Badge>
-                      </td>
-                      <td className="py-2 text-center">{device.battery ?? '--'}%</td>
-                      <td className="py-2 text-center">{device.signal_strength ?? '--'}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex items-center gap-6">
+              <div className="w-32 h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={50}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-3 flex-1">
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-muted-foreground">平均電量</span>
+                    <span className="font-medium">{deviceStats.avgBattery}%</span>
+                  </div>
+                  <Progress value={deviceStats.avgBattery} className="h-2" />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-muted-foreground">平均訊號</span>
+                    <span className="font-medium">{deviceStats.avgSignal}%</span>
+                  </div>
+                  <Progress value={deviceStats.avgSignal} className="h-2" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Alarms */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-warning" />
+              活動警報
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activeAlarms.length === 0 ? (
+              <div className="flex items-center justify-center h-24 text-muted-foreground">
+                <p>目前沒有活動警報</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {activeAlarms.slice(0, 5).map((alarm, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg border border-destructive/20">
+                    <div>
+                      <p className="text-sm font-medium">{alarm.device}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {getMetricLabel(alarm.metric)}: {alarm.value}{getMetricUnit(alarm.metric)} &gt; {alarm.threshold}{getMetricUnit(alarm.metric)}
+                      </p>
+                    </div>
+                    <Badge variant="destructive" className="text-[10px]">超標</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Environment Stats */}
+      {envStats && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              24 小時環境監測統計
+              <Badge variant="outline" className="ml-auto text-xs">
+                {envStats.dataCount} 筆資料
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {envStats.temperature && (
+                <div className="p-3 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg border border-orange-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Thermometer className="w-4 h-4 text-orange-500" />
+                    <span className="text-sm font-medium">溫度</span>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">平均</span>
+                      <span className="font-medium">{envStats.temperature.avg}°C</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">範圍</span>
+                      <span>{envStats.temperature.min} ~ {envStats.temperature.max}°C</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {envStats.humidity && (
+                <div className="p-3 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-lg border border-cyan-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Droplets className="w-4 h-4 text-cyan-500" />
+                    <span className="text-sm font-medium">濕度</span>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">平均</span>
+                      <span className="font-medium">{envStats.humidity.avg}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">範圍</span>
+                      <span>{envStats.humidity.min} ~ {envStats.humidity.max}%</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {envStats.pm25 && (
+                <div className="p-3 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wind className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm font-medium">PM2.5</span>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">平均</span>
+                      <span className="font-medium">{envStats.pm25.avg} μg/m³</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">範圍</span>
+                      <span>{envStats.pm25.min} ~ {envStats.pm25.max}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {envStats.pm10 && (
+                <div className="p-3 bg-gradient-to-br from-green-500/10 to-teal-500/10 rounded-lg border border-green-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wind className="w-4 h-4 text-green-500" />
+                    <span className="text-sm font-medium">PM10</span>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">平均</span>
+                      <span className="font-medium">{envStats.pm10.avg} μg/m³</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">範圍</span>
+                      <span>{envStats.pm10.min} ~ {envStats.pm10.max}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {envStats.noise && (
+                <div className="p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Volume2 className="w-4 h-4 text-purple-500" />
+                    <span className="text-sm font-medium">噪音</span>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">平均</span>
+                      <span className="font-medium">{envStats.noise.avg} dB</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">範圍</span>
+                      <span>{envStats.noise.min} ~ {envStats.noise.max} dB</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Trend Charts */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Thermometer className="w-4 h-4 text-orange-500" />
+              溫度趨勢
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                  <YAxis tick={{ fontSize: 10 }} unit="°C" className="text-muted-foreground" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Area type="monotone" dataKey="temperature" stroke="#f97316" fill="url(#tempGradient)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wind className="w-4 h-4 text-blue-500" />
+              PM2.5 趨勢
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="pm25Gradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                  <YAxis tick={{ fontSize: 10 }} unit="μg" className="text-muted-foreground" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Area type="monotone" dataKey="pm25" stroke="#3b82f6" fill="url(#pm25Gradient)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Device List */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Monitor className="w-4 h-4 text-primary" />
+            設備清單
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 text-muted-foreground font-medium">設備名稱</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">位置</th>
+                  <th className="text-center py-2 text-muted-foreground font-medium">狀態</th>
+                  <th className="text-center py-2 text-muted-foreground font-medium">電量</th>
+                  <th className="text-center py-2 text-muted-foreground font-medium">訊號</th>
+                </tr>
+              </thead>
+              <tbody>
+                {devices.map(device => (
+                  <tr key={device.id} className="border-b border-border/50 hover:bg-muted/50">
+                    <td className="py-2 font-medium">{device.name}</td>
+                    <td className="py-2 text-muted-foreground">{device.location || '--'}</td>
+                    <td className="py-2 text-center">
+                      <Badge variant={device.status === 'online' ? 'default' : 'secondary'} className="text-xs">
+                        {device.status === 'online' ? '上線' : '離線'}
+                      </Badge>
+                    </td>
+                    <td className="py-2 text-center">{device.battery ?? '--'}%</td>
+                    <td className="py-2 text-center">{device.signal_strength ?? '--'}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
