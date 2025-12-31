@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock
+  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { Json } from '@/integrations/supabase/types';
 
 interface SensorData {
   device_id: string;
@@ -25,6 +26,26 @@ interface Device {
   location: string | null;
 }
 
+interface WebSocketAlert {
+  id: string;
+  alert_type: string;
+  message: string;
+  device_id: string | null;
+  device_name: string | null;
+  severity: string;
+  acknowledged: boolean;
+  created_at: string;
+  metadata: Json | null;
+}
+
+const ALERT_TYPE_LABELS: Record<string, string> = {
+  'no_helmet': '未戴安全帽',
+  'no_vest': '未穿反光背心',
+  'intrusion': '入侵偵測',
+  'fire_smoke': '煙霧偵測',
+  'fall_detection': '跌倒偵測',
+};
+
 const TIME_RANGES = [
   { value: '6h', label: '6 小時', hours: 6 },
   { value: '12h', label: '12 小時', hours: 12 },
@@ -35,6 +56,7 @@ const TIME_RANGES = [
 const TrendAnalysisPage = () => {
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [wsAlerts, setWsAlerts] = useState<WebSocketAlert[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<string>('24h');
   const [loading, setLoading] = useState(true);
@@ -55,17 +77,25 @@ const TrendAnalysisPage = () => {
     setLoading(true);
     try {
       const hours = getTimeRangeHours();
-      const [sensorRes, devicesRes] = await Promise.all([
+      const startTime = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+      
+      const [sensorRes, devicesRes, wsAlertsRes] = await Promise.all([
         supabase
           .from('device_sensor_history')
           .select('*')
-          .gte('recorded_at', new Date(Date.now() - hours * 60 * 60 * 1000).toISOString())
+          .gte('recorded_at', startTime)
           .order('recorded_at', { ascending: true }),
         supabase.from('devices').select('id, device_id, name, location'),
+        supabase
+          .from('websocket_alerts')
+          .select('*')
+          .gte('created_at', startTime)
+          .order('created_at', { ascending: true }),
       ]);
 
       if (sensorRes.data) setSensorData(sensorRes.data);
       if (devicesRes.data) setDevices(devicesRes.data);
+      if (wsAlertsRes.data) setWsAlerts(wsAlertsRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -111,6 +141,45 @@ const TrendAnalysisPage = () => {
       dataCount: filteredSensorData.length,
     };
   }, [filteredSensorData]);
+
+  // Filter WebSocket alerts based on selected device
+  const filteredWsAlerts = useMemo(() => {
+    if (selectedDevice === 'all') return wsAlerts;
+    return wsAlerts.filter(a => a.device_id === selectedDevice);
+  }, [wsAlerts, selectedDevice]);
+
+  // WebSocket alert statistics by type
+  const wsAlertStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    filteredWsAlerts.forEach(alert => {
+      stats[alert.alert_type] = (stats[alert.alert_type] || 0) + 1;
+    });
+    return Object.entries(stats).map(([type, count]) => ({
+      type,
+      label: ALERT_TYPE_LABELS[type] || type,
+      count,
+    }));
+  }, [filteredWsAlerts]);
+
+  // WebSocket alert trend data
+  const wsAlertTrendData = useMemo(() => {
+    const grouped: { [key: string]: number } = {};
+    const is7Days = timeRange === '7d';
+    
+    filteredWsAlerts.forEach(alert => {
+      let timeKey: string;
+      if (is7Days) {
+        timeKey = new Date(alert.created_at).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+      } else {
+        timeKey = new Date(alert.created_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+      }
+      grouped[timeKey] = (grouped[timeKey] || 0) + 1;
+    });
+
+    return Object.entries(grouped)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([time, count]) => ({ time, count }));
+  }, [filteredWsAlerts, timeRange]);
 
   // Trend chart data
   const trendData = useMemo(() => {
@@ -521,6 +590,98 @@ const TrendAnalysisPage = () => {
             <p>所選設備目前沒有趨勢數據</p>
           </CardContent>
         </Card>
+      )}
+
+      {/* AI Detection Alert Statistics */}
+      {filteredWsAlerts.length > 0 && (
+        <>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-destructive" />
+                AI 偵測警報統計
+                <Badge variant="outline" className="ml-auto text-xs">
+                  {filteredWsAlerts.length} 筆警報
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {wsAlertStats.map(stat => (
+                  <div key={stat.type} className="p-3 bg-gradient-to-br from-destructive/10 to-orange-500/10 rounded-lg border border-destructive/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-4 h-4 text-destructive" />
+                      <span className="text-sm font-medium truncate">{stat.label}</span>
+                    </div>
+                    <div className="text-2xl font-bold text-destructive">{stat.count}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Alert Trend Chart */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-destructive" />
+                  AI 偵測警報趨勢
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={wsAlertTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                      <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number) => [`${value} 次`, '警報次數']}
+                      />
+                      <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Alert Type Distribution */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-warning" />
+                  警報類型分佈
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={wsAlertStats} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis type="number" tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                      <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={80} className="text-muted-foreground" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number) => [`${value} 次`, '次數']}
+                      />
+                      <Bar dataKey="count" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
     </div>
   );
