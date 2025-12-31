@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "./pages/Dashboard";
+import TrendAnalysisPage from "./pages/TrendAnalysisPage";
 import MapPage from "./pages/MapPage";
 import DeviceManagementPage from "./pages/DeviceManagementPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
@@ -25,6 +26,7 @@ const App = () => (
           <Routes>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/trends" element={<TrendAnalysisPage />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/devices" element={<DeviceManagementPage />} />
               <Route path="/notifications" element={<NotificationSettingsPage />} />
