@@ -8,6 +8,7 @@ import AppLayout from "@/components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import TrendAnalysisPage from "./pages/TrendAnalysisPage";
 import MapPage from "./pages/MapPage";
+import OrganizationManagementPage from "./pages/OrganizationManagementPage";
 import DeviceManagementPage from "./pages/DeviceManagementPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import AlarmHistory from "./pages/AlarmHistory";
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/trends" element={<TrendAnalysisPage />} />
               <Route path="/map" element={<MapPage />} />
+              <Route path="/organizations" element={<OrganizationManagementPage />} />
               <Route path="/devices" element={<DeviceManagementPage />} />
               <Route path="/notifications" element={<NotificationSettingsPage />} />
               <Route path="/alarm-history" element={<AlarmHistory />} />

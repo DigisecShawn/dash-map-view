@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, MapPin, Monitor, Bell, History, Wifi, 
-  Menu, X, ChevronLeft, BarChart3, TrendingUp
+  Menu, X, ChevronLeft, BarChart3, TrendingUp, Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ const navItems: NavItem[] = [
   { title: '儀表板', href: '/', icon: LayoutDashboard },
   { title: '趨勢分析', href: '/trends', icon: TrendingUp },
   { title: '電子地圖', href: '/map', icon: MapPin },
+  { title: '組織管理', href: '/organizations', icon: Building2 },
   { title: '設備管理', href: '/devices', icon: Monitor },
   { title: '通知設定', href: '/notifications', icon: Bell },
   { title: '警報歷史', href: '/alarm-history', icon: History },
