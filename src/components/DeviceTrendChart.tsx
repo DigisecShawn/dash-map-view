@@ -231,6 +231,42 @@ const DeviceTrendChart = ({
       });
   }, [data, isAggregate, devices, timeRange]);
 
+  // Helper function to calculate statistics
+  const calculateStats = (values: number[]) => {
+    if (values.length === 0) return null;
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    return {
+      avg: Math.round(avg * 10) / 10,
+      min: Math.round(min * 10) / 10,
+      max: Math.round(max * 10) / 10,
+      stdDev: Math.round(stdDev * 10) / 10,
+    };
+  };
+
+  // Calculate detailed statistics for all data
+  const detailedStats = useMemo(() => {
+    if (data.length === 0) return null;
+
+    const temps = data.map(r => r.temperature).filter(v => v !== null) as number[];
+    const humids = data.map(r => r.humidity).filter(v => v !== null) as number[];
+    const pm25s = data.map(r => r.pm25).filter(v => v !== null) as number[];
+    const pm10s = data.map(r => r.pm10).filter(v => v !== null) as number[];
+    const noises = data.map(r => r.noise).filter(v => v !== null) as number[];
+
+    return {
+      temperature: calculateStats(temps),
+      humidity: calculateStats(humids),
+      pm25: calculateStats(pm25s),
+      pm10: calculateStats(pm10s),
+      noise: calculateStats(noises),
+      dataCount: data.length,
+    };
+  }, [data]);
+
   // Calculate averages for aggregate view
   const aggregateStats = useMemo(() => {
     if (!isAggregate || data.length === 0) return null;
@@ -517,6 +553,97 @@ const DeviceTrendChart = ({
           </CardContent>
         </Card>
       </div>
+
+      {/* Statistics Summary */}
+      {detailedStats && (
+        <Card className="bg-gradient-to-br from-muted/50 to-muted/20 border-border/50">
+          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-4">
+            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+              📊 統計摘要
+              <Badge variant="outline" className="text-[10px] ml-auto">
+                {detailedStats.dataCount} 筆資料
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs sm:text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 text-muted-foreground font-medium">指標</th>
+                    <th className="text-right py-2 text-muted-foreground font-medium">平均</th>
+                    <th className="text-right py-2 text-muted-foreground font-medium">最小</th>
+                    <th className="text-right py-2 text-muted-foreground font-medium">最大</th>
+                    <th className="text-right py-2 text-muted-foreground font-medium">標準差</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detailedStats.temperature && (
+                    <tr className="border-b border-border/50">
+                      <td className="py-2 flex items-center gap-1.5">
+                        <Thermometer className="w-3 h-3 text-orange-500" />
+                        溫度
+                      </td>
+                      <td className="text-right py-2 font-medium">{detailedStats.temperature.avg}°C</td>
+                      <td className="text-right py-2 text-cyan-500">{detailedStats.temperature.min}°C</td>
+                      <td className="text-right py-2 text-destructive">{detailedStats.temperature.max}°C</td>
+                      <td className="text-right py-2 text-muted-foreground">±{detailedStats.temperature.stdDev}</td>
+                    </tr>
+                  )}
+                  {detailedStats.humidity && (
+                    <tr className="border-b border-border/50">
+                      <td className="py-2 flex items-center gap-1.5">
+                        <Droplets className="w-3 h-3 text-cyan-500" />
+                        濕度
+                      </td>
+                      <td className="text-right py-2 font-medium">{detailedStats.humidity.avg}%</td>
+                      <td className="text-right py-2 text-cyan-500">{detailedStats.humidity.min}%</td>
+                      <td className="text-right py-2 text-destructive">{detailedStats.humidity.max}%</td>
+                      <td className="text-right py-2 text-muted-foreground">±{detailedStats.humidity.stdDev}</td>
+                    </tr>
+                  )}
+                  {detailedStats.pm25 && (
+                    <tr className="border-b border-border/50">
+                      <td className="py-2 flex items-center gap-1.5">
+                        <Wind className="w-3 h-3 text-blue-500" />
+                        PM2.5
+                      </td>
+                      <td className="text-right py-2 font-medium">{detailedStats.pm25.avg} μg/m³</td>
+                      <td className="text-right py-2 text-cyan-500">{detailedStats.pm25.min} μg/m³</td>
+                      <td className="text-right py-2 text-destructive">{detailedStats.pm25.max} μg/m³</td>
+                      <td className="text-right py-2 text-muted-foreground">±{detailedStats.pm25.stdDev}</td>
+                    </tr>
+                  )}
+                  {detailedStats.pm10 && (
+                    <tr className="border-b border-border/50">
+                      <td className="py-2 flex items-center gap-1.5">
+                        <Wind className="w-3 h-3 text-green-500" />
+                        PM10
+                      </td>
+                      <td className="text-right py-2 font-medium">{detailedStats.pm10.avg} μg/m³</td>
+                      <td className="text-right py-2 text-cyan-500">{detailedStats.pm10.min} μg/m³</td>
+                      <td className="text-right py-2 text-destructive">{detailedStats.pm10.max} μg/m³</td>
+                      <td className="text-right py-2 text-muted-foreground">±{detailedStats.pm10.stdDev}</td>
+                    </tr>
+                  )}
+                  {detailedStats.noise && (
+                    <tr>
+                      <td className="py-2 flex items-center gap-1.5">
+                        <Volume2 className="w-3 h-3 text-purple-500" />
+                        噪音
+                      </td>
+                      <td className="text-right py-2 font-medium">{detailedStats.noise.avg} dB</td>
+                      <td className="text-right py-2 text-cyan-500">{detailedStats.noise.min} dB</td>
+                      <td className="text-right py-2 text-destructive">{detailedStats.noise.max} dB</td>
+                      <td className="text-right py-2 text-muted-foreground">±{detailedStats.noise.stdDev}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Chart */}
       <Card>
