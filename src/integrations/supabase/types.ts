@@ -313,6 +313,42 @@ export type Database = {
         }
         Relationships: []
       }
+      websocket_alerts: {
+        Row: {
+          acknowledged: boolean
+          alert_type: string
+          created_at: string
+          device_id: string | null
+          device_name: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          severity: string
+        }
+        Insert: {
+          acknowledged?: boolean
+          alert_type: string
+          created_at?: string
+          device_id?: string | null
+          device_name?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          severity?: string
+        }
+        Update: {
+          acknowledged?: boolean
+          alert_type?: string
+          created_at?: string
+          device_id?: string | null
+          device_name?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          severity?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
