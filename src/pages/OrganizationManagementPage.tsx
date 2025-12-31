@@ -269,10 +269,12 @@ const OrganizationManagementPage = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">公司列表</CardTitle>
-              <Button onClick={() => handleOpenCompanyDialog()} className="gap-2">
-                <Plus className="w-4 h-4" />
-                新增公司
-              </Button>
+              {companies.length === 0 && (
+                <Button onClick={() => handleOpenCompanyDialog()} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  新增公司
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <Table>
