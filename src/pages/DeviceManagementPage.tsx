@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Monitor, Bell, Settings, Trash2, Plus, MapPin, Save, Edit2, X, Camera, Video, Cctv, Webcam, ScanEye, Eye, LucideIcon } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Monitor, Bell, Settings, Trash2, Plus, MapPin, Save, Edit2, X, Camera, Video, Cctv, Webcam, ScanEye, Eye, LucideIcon, Building2, Factory, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+
+interface Company {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+interface Site {
+  id: string;
+  company_id: string;
+  name: string;
+  address: string | null;
+  description: string | null;
+}
 
 interface Device {
   id: string;
@@ -22,6 +36,8 @@ interface Device {
   battery: number | null;
   signal_strength: number | null;
   mqtt_topic: string | null;
+  company_id: string | null;
+  site_id: string | null;
 }
 
 interface DeviceCamera {
@@ -56,6 +72,8 @@ const getCameraIcon = (iconType: string): LucideIcon => {
 };
 
 const DeviceManagementPage = () => {
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [cameras, setCameras] = useState<DeviceCamera[]>([]);
   const [thresholds, setThresholds] = useState<AlarmThreshold[]>([]);
@@ -66,7 +84,10 @@ const DeviceManagementPage = () => {
   const [isAddingCamera, setIsAddingCamera] = useState(false);
   const [selectedDeviceForCamera, setSelectedDeviceForCamera] = useState<string>('');
 
+  // New device form with hierarchical selection
   const [newDevice, setNewDevice] = useState({
+    company_id: '',
+    site_id: '',
     device_id: '',
     name: '',
     lat: '',
@@ -81,6 +102,16 @@ const DeviceManagementPage = () => {
     icon_type: 'camera',
   });
 
+  // Filter sites based on selected company
+  const filteredSitesForNewDevice = useMemo(() => {
+    if (!newDevice.company_id) return [];
+    return sites.filter(s => s.company_id === newDevice.company_id);
+  }, [sites, newDevice.company_id]);
+
+  // Get company and site names
+  const getCompanyName = (id: string | null) => companies.find(c => c.id === id)?.name || '-';
+  const getSiteName = (id: string | null) => sites.find(s => s.id === id)?.name || '-';
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -88,12 +119,16 @@ const DeviceManagementPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [devicesRes, camerasRes, thresholdsRes] = await Promise.all([
+      const [companiesRes, sitesRes, devicesRes, camerasRes, thresholdsRes] = await Promise.all([
+        supabase.from('companies').select('*').order('name'),
+        supabase.from('sites').select('*').order('name'),
         supabase.from('devices').select('*').order('created_at', { ascending: false }),
         supabase.from('cameras').select('*').order('created_at', { ascending: false }),
         supabase.from('device_alarm_thresholds').select('*'),
       ]);
 
+      if (companiesRes.data) setCompanies(companiesRes.data);
+      if (sitesRes.data) setSites(sitesRes.data);
       if (devicesRes.data) setDevices(devicesRes.data);
       if (camerasRes.data) setCameras(camerasRes.data);
       if (thresholdsRes.data) setThresholds(thresholdsRes.data);
@@ -106,6 +141,14 @@ const DeviceManagementPage = () => {
   };
 
   const handleAddDevice = async () => {
+    if (!newDevice.company_id) {
+      toast.error('請先選擇公司');
+      return;
+    }
+    if (!newDevice.site_id) {
+      toast.error('請先選擇工地');
+      return;
+    }
     if (!newDevice.device_id || !newDevice.name || !newDevice.lat || !newDevice.lng) {
       toast.error('請填寫必要欄位');
       return;
@@ -113,6 +156,8 @@ const DeviceManagementPage = () => {
 
     try {
       const { error } = await supabase.from('devices').insert({
+        company_id: newDevice.company_id,
+        site_id: newDevice.site_id,
         device_id: newDevice.device_id,
         name: newDevice.name,
         lat: parseFloat(newDevice.lat),
@@ -125,7 +170,7 @@ const DeviceManagementPage = () => {
       if (error) throw error;
 
       toast.success('設備新增成功');
-      setNewDevice({ device_id: '', name: '', lat: '', lng: '', location: '', mqtt_topic: '' });
+      setNewDevice({ company_id: '', site_id: '', device_id: '', name: '', lat: '', lng: '', location: '', mqtt_topic: '' });
       setIsAddingDevice(false);
       fetchData();
     } catch (error) {
@@ -274,64 +319,163 @@ const DeviceManagementPage = () => {
           {isAddingDevice && (
             <Card className="border-primary/50">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">新增設備</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  新增設備
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label>設備 ID *</Label>
-                    <Input
-                      placeholder="DEV-001"
-                      value={newDevice.device_id}
-                      onChange={e => setNewDevice(prev => ({ ...prev, device_id: e.target.value }))}
-                    />
+              <CardContent className="space-y-6">
+                {/* Step indicator */}
+                <div className="flex items-center gap-2 text-sm">
+                  <div className={`flex items-center gap-1 ${newDevice.company_id ? 'text-primary' : 'text-muted-foreground'}`}>
+                    <Building2 className="w-4 h-4" />
+                    <span>1. 公司</span>
                   </div>
-                  <div className="space-y-2">
-                    <Label>名稱 *</Label>
-                    <Input
-                      placeholder="設備名稱"
-                      value={newDevice.name}
-                      onChange={e => setNewDevice(prev => ({ ...prev, name: e.target.value }))}
-                    />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  <div className={`flex items-center gap-1 ${newDevice.site_id ? 'text-primary' : 'text-muted-foreground'}`}>
+                    <Factory className="w-4 h-4" />
+                    <span>2. 工地</span>
                   </div>
-                  <div className="space-y-2">
-                    <Label>位置</Label>
-                    <Input
-                      placeholder="安裝位置"
-                      value={newDevice.location}
-                      onChange={e => setNewDevice(prev => ({ ...prev, location: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>緯度 *</Label>
-                    <Input
-                      type="number"
-                      placeholder="25.0330"
-                      value={newDevice.lat}
-                      onChange={e => setNewDevice(prev => ({ ...prev, lat: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>經度 *</Label>
-                    <Input
-                      type="number"
-                      placeholder="121.5654"
-                      value={newDevice.lng}
-                      onChange={e => setNewDevice(prev => ({ ...prev, lng: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>MQTT Topic</Label>
-                    <Input
-                      placeholder="devices/dev-001"
-                      value={newDevice.mqtt_topic}
-                      onChange={e => setNewDevice(prev => ({ ...prev, mqtt_topic: e.target.value }))}
-                    />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  <div className={`flex items-center gap-1 ${newDevice.name ? 'text-primary' : 'text-muted-foreground'}`}>
+                    <Monitor className="w-4 h-4" />
+                    <span>3. 設備資訊</span>
                   </div>
                 </div>
+
+                {/* Step 1: Select Company */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    隸屬公司 *
+                  </Label>
+                  <Select 
+                    value={newDevice.company_id} 
+                    onValueChange={v => setNewDevice(prev => ({ ...prev, company_id: v, site_id: '' }))}
+                  >
+                    <SelectTrigger className="bg-card">
+                      <SelectValue placeholder="請先選擇公司" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card z-50">
+                      {companies.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="w-4 h-4" />
+                            {c.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {companies.length === 0 && (
+                    <p className="text-xs text-muted-foreground">尚無公司資料，請先在組織管理中新增公司</p>
+                  )}
+                </div>
+
+                {/* Step 2: Select Site (only shown after company selected) */}
+                {newDevice.company_id && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Factory className="w-4 h-4" />
+                      隸屬工地 *
+                    </Label>
+                    <Select 
+                      value={newDevice.site_id} 
+                      onValueChange={v => setNewDevice(prev => ({ ...prev, site_id: v }))}
+                    >
+                      <SelectTrigger className="bg-card">
+                        <SelectValue placeholder="請選擇工地" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card z-50">
+                        {filteredSitesForNewDevice.map(s => (
+                          <SelectItem key={s.id} value={s.id}>
+                            <div className="flex items-center gap-2">
+                              <Factory className="w-4 h-4" />
+                              {s.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {filteredSitesForNewDevice.length === 0 && (
+                      <p className="text-xs text-muted-foreground">此公司尚無工地資料，請先在組織管理中新增工地</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 3: Device Details (only shown after site selected) */}
+                {newDevice.site_id && (
+                  <div className="space-y-4 pt-2 border-t border-border">
+                    <Label className="flex items-center gap-2 text-base font-medium">
+                      <Monitor className="w-4 h-4" />
+                      設備資訊
+                    </Label>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label>設備 ID *</Label>
+                        <Input
+                          placeholder="DEV-001"
+                          value={newDevice.device_id}
+                          onChange={e => setNewDevice(prev => ({ ...prev, device_id: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>設備名稱 *</Label>
+                        <Input
+                          placeholder="設備名稱"
+                          value={newDevice.name}
+                          onChange={e => setNewDevice(prev => ({ ...prev, name: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>安裝位置</Label>
+                        <Input
+                          placeholder="安裝位置描述"
+                          value={newDevice.location}
+                          onChange={e => setNewDevice(prev => ({ ...prev, location: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>緯度 *</Label>
+                        <Input
+                          type="number"
+                          placeholder="25.0330"
+                          value={newDevice.lat}
+                          onChange={e => setNewDevice(prev => ({ ...prev, lat: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>經度 *</Label>
+                        <Input
+                          type="number"
+                          placeholder="121.5654"
+                          value={newDevice.lng}
+                          onChange={e => setNewDevice(prev => ({ ...prev, lng: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>MQTT Topic</Label>
+                        <Input
+                          placeholder="devices/dev-001"
+                          value={newDevice.mqtt_topic}
+                          onChange={e => setNewDevice(prev => ({ ...prev, mqtt_topic: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setIsAddingDevice(false)}>取消</Button>
-                  <Button onClick={handleAddDevice}>儲存</Button>
+                  <Button variant="outline" onClick={() => {
+                    setIsAddingDevice(false);
+                    setNewDevice({ company_id: '', site_id: '', device_id: '', name: '', lat: '', lng: '', location: '', mqtt_topic: '' });
+                  }}>取消</Button>
+                  <Button 
+                    onClick={handleAddDevice}
+                    disabled={!newDevice.company_id || !newDevice.site_id}
+                  >
+                    儲存設備
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -359,13 +503,24 @@ const DeviceManagementPage = () => {
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start justify-between mb-2">
                         <div>
                           <h3 className="font-semibold">{device.name}</h3>
                           <p className="text-sm text-muted-foreground">{device.device_id}</p>
                         </div>
                         <Badge variant={device.status === 'online' ? 'default' : 'secondary'}>
                           {device.status === 'online' ? '上線' : '離線'}
+                        </Badge>
+                      </div>
+                      {/* Company and Site info */}
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        <Badge variant="outline" className="text-xs gap-1">
+                          <Building2 className="w-3 h-3" />
+                          {getCompanyName(device.company_id)}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs gap-1">
+                          <Factory className="w-3 h-3" />
+                          {getSiteName(device.site_id)}
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground space-y-1 mb-3">
