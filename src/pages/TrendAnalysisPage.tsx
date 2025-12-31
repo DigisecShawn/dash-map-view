@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor
+  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,24 +25,41 @@ interface Device {
   location: string | null;
 }
 
+const TIME_RANGES = [
+  { value: '6h', label: '6 小時', hours: 6 },
+  { value: '12h', label: '12 小時', hours: 12 },
+  { value: '24h', label: '24 小時', hours: 24 },
+  { value: '7d', label: '7 天', hours: 168 },
+];
+
 const TrendAnalysisPage = () => {
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string>('all');
+  const [timeRange, setTimeRange] = useState<string>('24h');
   const [loading, setLoading] = useState(true);
+
+  const getTimeRangeHours = () => {
+    return TIME_RANGES.find(t => t.value === timeRange)?.hours || 24;
+  };
+
+  const getTimeRangeLabel = () => {
+    return TIME_RANGES.find(t => t.value === timeRange)?.label || '24 小時';
+  };
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [timeRange]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      const hours = getTimeRangeHours();
       const [sensorRes, devicesRes] = await Promise.all([
         supabase
           .from('device_sensor_history')
           .select('*')
-          .gte('recorded_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .gte('recorded_at', new Date(Date.now() - hours * 60 * 60 * 1000).toISOString())
           .order('recorded_at', { ascending: true }),
         supabase.from('devices').select('id, device_id, name, location'),
       ]);
@@ -98,15 +115,24 @@ const TrendAnalysisPage = () => {
   // Trend chart data
   const trendData = useMemo(() => {
     const grouped: { [key: string]: SensorData[] } = {};
+    const is7Days = timeRange === '7d';
+    
     filteredSensorData.forEach(d => {
-      const hour = new Date(d.recorded_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-      if (!grouped[hour]) grouped[hour] = [];
-      grouped[hour].push(d);
+      let timeKey: string;
+      if (is7Days) {
+        timeKey = new Date(d.recorded_at).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+      } else {
+        timeKey = new Date(d.recorded_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+      }
+      if (!grouped[timeKey]) grouped[timeKey] = [];
+      grouped[timeKey].push(d);
     });
+
+    const maxPoints = is7Days ? 14 : 12;
 
     return Object.entries(grouped)
       .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-12)
+      .slice(-maxPoints)
       .map(([time, records]) => {
         const temps = records.map(r => r.temperature).filter(v => v !== null) as number[];
         const pm25s = records.map(r => r.pm25).filter(v => v !== null) as number[];
@@ -122,7 +148,7 @@ const TrendAnalysisPage = () => {
           noise: noises.length > 0 ? Math.round(noises.reduce((a, b) => a + b, 0) / noises.length * 10) / 10 : null,
         };
       });
-  }, [filteredSensorData]);
+  }, [filteredSensorData, timeRange]);
 
   if (loading) {
     return (
@@ -140,32 +166,55 @@ const TrendAnalysisPage = () => {
             <BarChart3 className="w-6 h-6 text-primary" />
             趨勢分析
           </h1>
-          <p className="text-muted-foreground">24 小時環境監測數據趨勢與統計</p>
+          <p className="text-muted-foreground">{getTimeRangeLabel()}環境監測數據趨勢與統計</p>
         </div>
         
-        {/* Device Selector */}
-        <div className="flex items-center gap-2">
-          <Monitor className="w-4 h-4 text-muted-foreground" />
-          <Select value={selectedDevice} onValueChange={setSelectedDevice}>
-            <SelectTrigger className="w-[200px] bg-card">
-              <SelectValue placeholder="選擇設備" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border z-50">
-              <SelectItem value="all">全部設備</SelectItem>
-              {devices.map(device => (
-                <SelectItem key={device.device_id} value={device.device_id}>
-                  {device.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Selectors */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Time Range Selector */}
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-[120px] bg-card">
+                <SelectValue placeholder="時間範圍" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border z-50">
+                {TIME_RANGES.map(range => (
+                  <SelectItem key={range.value} value={range.value}>
+                    {range.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Device Selector */}
+          <div className="flex items-center gap-2">
+            <Monitor className="w-4 h-4 text-muted-foreground" />
+            <Select value={selectedDevice} onValueChange={setSelectedDevice}>
+              <SelectTrigger className="w-[180px] bg-card">
+                <SelectValue placeholder="選擇設備" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border z-50">
+                <SelectItem value="all">全部設備</SelectItem>
+                {devices.map(device => (
+                  <SelectItem key={device.device_id} value={device.device_id}>
+                    {device.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       {/* Current Selection Badge */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Badge variant="outline" className="text-sm">
           目前檢視: {selectedDeviceName}
+        </Badge>
+        <Badge variant="secondary" className="text-sm">
+          時間範圍: {getTimeRangeLabel()}
         </Badge>
         {selectedDevice !== 'all' && (
           <Badge variant="secondary" className="text-xs">
@@ -180,7 +229,7 @@ const TrendAnalysisPage = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
-              24 小時環境監測統計
+              {getTimeRangeLabel()}環境監測統計
               <Badge variant="outline" className="ml-auto text-xs">
                 {envStats.dataCount} 筆資料
               </Badge>
