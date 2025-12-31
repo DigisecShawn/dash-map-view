@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Monitor, Wifi, WifiOff, AlertTriangle, Activity, Radio, HardHat, Building2, MapPin, ChevronRight
+  Monitor, Wifi, WifiOff, AlertTriangle, Activity, Radio, HardHat, Building2, MapPin, ChevronRight, Sun, Zap
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 
@@ -21,6 +21,7 @@ interface Device {
   location: string | null;
   company_id: string | null;
   site_id: string | null;
+  current_solar_power: number | null;
 }
 
 interface SensorData {
@@ -141,12 +142,30 @@ const Dashboard = () => {
   }, [devices, selectedCompanyId, selectedSiteId]);
 
   // Device statistics based on filtered devices
+  // Device statistics based on filtered devices
   const deviceStats = useMemo(() => {
     const online = filteredDevices.filter(d => d.status === 'online').length;
     const offline = filteredDevices.filter(d => d.status === 'offline').length;
     const avgBattery = filteredDevices.reduce((sum, d) => sum + (d.battery || 0), 0) / (filteredDevices.length || 1);
     const avgSignal = filteredDevices.reduce((sum, d) => sum + (d.signal_strength || 0), 0) / (filteredDevices.length || 1);
     return { total: filteredDevices.length, online, offline, avgBattery: Math.round(avgBattery), avgSignal: Math.round(avgSignal) };
+  }, [filteredDevices]);
+
+  // Solar power statistics
+  const solarStats = useMemo(() => {
+    const devicesWithSolar = filteredDevices.filter(d => d.current_solar_power !== null && d.current_solar_power > 0);
+    const totalPower = filteredDevices.reduce((sum, d) => sum + (d.current_solar_power || 0), 0);
+    const avgPower = devicesWithSolar.length > 0 
+      ? totalPower / devicesWithSolar.length 
+      : 0;
+    const maxPower = filteredDevices.reduce((max, d) => Math.max(max, d.current_solar_power || 0), 0);
+    
+    return {
+      totalPower: Math.round(totalPower * 100) / 100,
+      avgPower: Math.round(avgPower * 100) / 100,
+      maxPower: Math.round(maxPower * 100) / 100,
+      activeDevices: devicesWithSolar.length,
+    };
   }, [filteredDevices]);
 
   // Sensor-based active alarms (filtered by device)
@@ -193,11 +212,6 @@ const Dashboard = () => {
   // Total alarm count
   const totalAlarmCount = sensorAlarms.length + filteredWsAlerts.length;
 
-  // Pie chart data for device status
-  const pieData = [
-    { name: '上線', value: deviceStats.online, color: 'hsl(var(--success))' },
-    { name: '離線', value: deviceStats.offline, color: 'hsl(var(--muted-foreground))' },
-  ];
 
   const getMetricLabel = (metric: string) => {
     const labels: { [key: string]: string } = {
@@ -359,51 +373,55 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Device Status & Active Alarms */}
+      {/* Solar Power Stats & Active Alarms */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Device Status Pie */}
-        <Card>
+        {/* Solar Power Statistics */}
+        <Card className="bg-gradient-to-br from-yellow-500/5 to-orange-500/5 border-yellow-500/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <Activity className="w-4 h-4 text-primary" />
-              設備狀態分佈
+              <Sun className="w-4 h-4 text-yellow-500" />
+              太陽能發電統計
+              <Badge variant="outline" className="ml-auto text-xs">
+                {deviceStats.total} 台設備
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-6">
-              <div className="w-32 h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={30}
-                      outerRadius={50}
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Total Power */}
+              <div className="p-4 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="w-5 h-5 text-yellow-500" />
+                  <span className="text-sm text-muted-foreground">總發電量</span>
+                </div>
+                <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {solarStats.totalPower}
+                  <span className="text-lg font-normal ml-1">kW</span>
+                </p>
               </div>
-              <div className="space-y-3 flex-1">
-                <div>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-muted-foreground">平均電量</span>
-                    <span className="font-medium">{deviceStats.avgBattery}%</span>
-                  </div>
-                  <Progress value={deviceStats.avgBattery} className="h-2" />
+              
+              {/* Average Power */}
+              <div className="p-4 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl border border-orange-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="w-5 h-5 text-orange-500" />
+                  <span className="text-sm text-muted-foreground">平均發電量</span>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-muted-foreground">平均訊號</span>
-                    <span className="font-medium">{deviceStats.avgSignal}%</span>
-                  </div>
-                  <Progress value={deviceStats.avgSignal} className="h-2" />
-                </div>
+                <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                  {solarStats.avgPower}
+                  <span className="text-lg font-normal ml-1">kW</span>
+                </p>
+              </div>
+            </div>
+            
+            {/* Additional Stats */}
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                <span className="text-sm text-muted-foreground">最高發電量</span>
+                <span className="font-semibold">{solarStats.maxPower} kW</span>
+              </div>
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                <span className="text-sm text-muted-foreground">發電中設備</span>
+                <span className="font-semibold">{solarStats.activeDevices} 台</span>
               </div>
             </div>
           </CardContent>
