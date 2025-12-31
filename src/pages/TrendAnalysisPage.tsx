@@ -461,7 +461,17 @@ const TrendAnalysisPage = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Thermometer className="w-4 h-4 text-orange-500" />
-                溫度趨勢
+                溫溼度趨勢
+                <div className="ml-auto flex items-center gap-3 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-0.5 bg-orange-500 rounded" />
+                    <span className="text-muted-foreground">溫度</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-0.5 bg-cyan-500 rounded" />
+                    <span className="text-muted-foreground">濕度</span>
+                  </div>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -473,36 +483,6 @@ const TrendAnalysisPage = () => {
                         <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
                         <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                       </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} unit="°C" className="text-muted-foreground" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Area type="monotone" dataKey="temperature" stroke="#f97316" fill="url(#tempGradient)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Droplets className="w-4 h-4 text-cyan-500" />
-                濕度趨勢
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData}>
-                    <defs>
                       <linearGradient id="humidGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
                         <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
@@ -510,15 +490,22 @@ const TrendAnalysisPage = () => {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                     <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} unit="%" className="text-muted-foreground" />
+                    <YAxis yAxisId="temp" tick={{ fontSize: 10 }} unit="°C" className="text-muted-foreground" orientation="left" />
+                    <YAxis yAxisId="humid" tick={{ fontSize: 10 }} unit="%" className="text-muted-foreground" orientation="right" />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
                       }}
+                      formatter={(value: number, name: string) => {
+                        if (name === 'temperature') return [`${value}°C`, '溫度'];
+                        if (name === 'humidity') return [`${value}%`, '濕度'];
+                        return [value, name];
+                      }}
                     />
-                    <Area type="monotone" dataKey="humidity" stroke="#06b6d4" fill="url(#humidGradient)" strokeWidth={2} />
+                    <Area yAxisId="temp" type="monotone" dataKey="temperature" stroke="#f97316" fill="url(#tempGradient)" strokeWidth={2} name="temperature" />
+                    <Area yAxisId="humid" type="monotone" dataKey="humidity" stroke="#06b6d4" fill="url(#humidGradient)" strokeWidth={2} name="humidity" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
