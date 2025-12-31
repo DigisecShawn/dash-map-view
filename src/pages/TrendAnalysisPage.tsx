@@ -529,7 +529,17 @@ const TrendAnalysisPage = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Wind className="w-4 h-4 text-blue-500" />
-                PM2.5 趨勢
+                空氣品質趨勢
+                <div className="ml-auto flex items-center gap-3 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-0.5 bg-blue-500 rounded" />
+                    <span className="text-muted-foreground">PM2.5</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-0.5 bg-green-500 rounded" />
+                    <span className="text-muted-foreground">PM10</span>
+                  </div>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -541,36 +551,6 @@ const TrendAnalysisPage = () => {
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                       </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} unit="μg" className="text-muted-foreground" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Area type="monotone" dataKey="pm25" stroke="#3b82f6" fill="url(#pm25Gradient)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Wind className="w-4 h-4 text-green-500" />
-                PM10 趨勢
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData}>
-                    <defs>
                       <linearGradient id="pm10Gradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
                         <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
@@ -578,15 +558,20 @@ const TrendAnalysisPage = () => {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                     <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} unit="μg" className="text-muted-foreground" />
+                    <YAxis tick={{ fontSize: 10 }} unit="μg/m³" className="text-muted-foreground" />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
                       }}
+                      formatter={(value: number, name: string) => {
+                        const labels: Record<string, string> = { pm25: 'PM2.5', pm10: 'PM10' };
+                        return [`${value} μg/m³`, labels[name] || name];
+                      }}
                     />
-                    <Area type="monotone" dataKey="pm10" stroke="#22c55e" fill="url(#pm10Gradient)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="pm25" stroke="#3b82f6" fill="url(#pm25Gradient)" strokeWidth={2} name="pm25" />
+                    <Area type="monotone" dataKey="pm10" stroke="#22c55e" fill="url(#pm10Gradient)" strokeWidth={2} name="pm10" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
