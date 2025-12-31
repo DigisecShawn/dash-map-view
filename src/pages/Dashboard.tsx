@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Monitor, Wifi, WifiOff, AlertTriangle, Activity, Radio, HardHat
+  Monitor, Wifi, WifiOff, AlertTriangle, Activity, Radio, HardHat, Building2, MapPin, ChevronRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,8 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import CompanySiteFilter from '@/components/CompanySiteFilter';
+import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 
 interface Device {
   id: string;
@@ -17,6 +19,8 @@ interface Device {
   battery: number | null;
   signal_strength: number | null;
   location: string | null;
+  company_id: string | null;
+  site_id: string | null;
 }
 
 interface SensorData {
@@ -53,6 +57,18 @@ const Dashboard = () => {
   const [thresholds, setThresholds] = useState<AlarmThreshold[]>([]);
   const [wsAlerts, setWsAlerts] = useState<WebSocketAlert[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const {
+    companies,
+    filteredSites,
+    selectedCompanyId,
+    selectedSiteId,
+    setSelectedCompanyId,
+    setSelectedSiteId,
+    loading: filterLoading,
+    getCompanyName,
+    getSiteName,
+  } = useCompanySiteFilter();
 
   useEffect(() => {
     fetchData();
@@ -109,21 +125,39 @@ const Dashboard = () => {
     }
   };
 
-  // Device statistics
-  const deviceStats = useMemo(() => {
-    const online = devices.filter(d => d.status === 'online').length;
-    const offline = devices.filter(d => d.status === 'offline').length;
-    const avgBattery = devices.reduce((sum, d) => sum + (d.battery || 0), 0) / (devices.length || 1);
-    const avgSignal = devices.reduce((sum, d) => sum + (d.signal_strength || 0), 0) / (devices.length || 1);
-    return { total: devices.length, online, offline, avgBattery: Math.round(avgBattery), avgSignal: Math.round(avgSignal) };
-  }, [devices]);
+  // Filter devices based on company and site selection
+  const filteredDevices = useMemo(() => {
+    let result = devices;
+    
+    if (selectedCompanyId !== 'all') {
+      result = result.filter(d => d.company_id === selectedCompanyId);
+    }
+    
+    if (selectedSiteId !== 'all') {
+      result = result.filter(d => d.site_id === selectedSiteId);
+    }
+    
+    return result;
+  }, [devices, selectedCompanyId, selectedSiteId]);
 
-  // Sensor-based active alarms
+  // Device statistics based on filtered devices
+  const deviceStats = useMemo(() => {
+    const online = filteredDevices.filter(d => d.status === 'online').length;
+    const offline = filteredDevices.filter(d => d.status === 'offline').length;
+    const avgBattery = filteredDevices.reduce((sum, d) => sum + (d.battery || 0), 0) / (filteredDevices.length || 1);
+    const avgSignal = filteredDevices.reduce((sum, d) => sum + (d.signal_strength || 0), 0) / (filteredDevices.length || 1);
+    return { total: filteredDevices.length, online, offline, avgBattery: Math.round(avgBattery), avgSignal: Math.round(avgSignal) };
+  }, [filteredDevices]);
+
+  // Sensor-based active alarms (filtered by device)
   const sensorAlarms = useMemo(() => {
     if (sensorData.length === 0 || thresholds.length === 0) return [];
     
+    const filteredDeviceIds = new Set(filteredDevices.map(d => d.device_id));
+    
     const latestByDevice: { [key: string]: SensorData } = {};
     sensorData.forEach(d => {
+      if (!filteredDeviceIds.has(d.device_id)) return;
       if (!latestByDevice[d.device_id] || new Date(d.recorded_at) > new Date(latestByDevice[d.device_id].recorded_at)) {
         latestByDevice[d.device_id] = d;
       }
@@ -131,12 +165,13 @@ const Dashboard = () => {
 
     const alarms: { device: string; metric: string; value: number; threshold: number; type: 'sensor' }[] = [];
     thresholds.forEach(t => {
+      if (!filteredDeviceIds.has(t.device_id)) return;
       const data = latestByDevice[t.device_id];
       if (!data) return;
       
       const value = data[t.metric_type as keyof SensorData] as number;
       if (value !== null && value > t.threshold_value) {
-        const device = devices.find(d => d.device_id === t.device_id);
+        const device = filteredDevices.find(d => d.device_id === t.device_id);
         alarms.push({
           device: device?.name || t.device_id,
           metric: t.metric_type,
@@ -147,10 +182,16 @@ const Dashboard = () => {
       }
     });
     return alarms;
-  }, [sensorData, thresholds, devices]);
+  }, [sensorData, thresholds, filteredDevices]);
+
+  // Filter WebSocket alerts by device
+  const filteredWsAlerts = useMemo(() => {
+    const filteredDeviceIds = new Set(filteredDevices.map(d => d.device_id));
+    return wsAlerts.filter(alert => !alert.device_id || filteredDeviceIds.has(alert.device_id));
+  }, [wsAlerts, filteredDevices]);
 
   // Total alarm count
-  const totalAlarmCount = sensorAlarms.length + wsAlerts.length;
+  const totalAlarmCount = sensorAlarms.length + filteredWsAlerts.length;
 
   // Pie chart data for device status
   const pieData = [
@@ -221,7 +262,7 @@ const Dashboard = () => {
     return date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
   };
 
-  if (loading) {
+  if (loading || filterLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
@@ -231,10 +272,41 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">數據儀表板</h1>
-        <p className="text-muted-foreground">即時設備監控總覽</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">數據儀表板</h1>
+          <p className="text-muted-foreground">即時設備監控總覽</p>
+        </div>
+        
+        {/* Company/Site Filter */}
+        <CompanySiteFilter
+          companies={companies}
+          filteredSites={filteredSites}
+          selectedCompanyId={selectedCompanyId}
+          selectedSiteId={selectedSiteId}
+          onCompanyChange={setSelectedCompanyId}
+          onSiteChange={setSelectedSiteId}
+        />
       </div>
+
+      {/* Current Filter Badge */}
+      {(selectedCompanyId !== 'all' || selectedSiteId !== 'all') && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="outline" className="text-sm flex items-center gap-1">
+            <Building2 className="w-3 h-3" />
+            {selectedCompanyId === 'all' ? '全部公司' : getCompanyName(selectedCompanyId)}
+          </Badge>
+          {selectedSiteId !== 'all' && (
+            <>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <Badge variant="outline" className="text-sm flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {getSiteName(selectedSiteId)}
+              </Badge>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Device Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -360,7 +432,7 @@ const Dashboard = () => {
                   感測器 ({sensorAlarms.length})
                 </TabsTrigger>
                 <TabsTrigger value="websocket" className="text-xs">
-                  AI偵測 ({wsAlerts.length})
+                  AI偵測 ({filteredWsAlerts.length})
                 </TabsTrigger>
               </TabsList>
 
@@ -371,7 +443,7 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {wsAlerts.slice(0, 3).map((alert) => (
+                    {filteredWsAlerts.slice(0, 3).map((alert) => (
                       <div key={alert.id} className="flex items-center justify-between p-2 bg-warning/10 rounded-lg border border-warning/20">
                         <div className="flex items-center gap-2">
                           {getAlertTypeIcon(alert.alert_type)}
@@ -423,13 +495,13 @@ const Dashboard = () => {
               </TabsContent>
 
               <TabsContent value="websocket" className="mt-0">
-                {wsAlerts.length === 0 ? (
+                {filteredWsAlerts.length === 0 ? (
                   <div className="flex items-center justify-center h-24 text-muted-foreground">
                     <p>目前沒有 AI 偵測警報</p>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {wsAlerts.map((alert) => (
+                    {filteredWsAlerts.map((alert) => (
                       <div key={alert.id} className="flex items-center justify-between p-2 bg-warning/10 rounded-lg border border-warning/20">
                         <div className="flex items-center gap-2">
                           {getAlertTypeIcon(alert.alert_type)}
@@ -470,6 +542,8 @@ const Dashboard = () => {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-2 text-muted-foreground font-medium">設備名稱</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">公司</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">工地</th>
                   <th className="text-left py-2 text-muted-foreground font-medium">位置</th>
                   <th className="text-center py-2 text-muted-foreground font-medium">狀態</th>
                   <th className="text-center py-2 text-muted-foreground font-medium">電量</th>
@@ -477,9 +551,21 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {devices.map(device => (
+                {filteredDevices.map(device => (
                   <tr key={device.id} className="border-b border-border/50 hover:bg-muted/50">
                     <td className="py-2 font-medium">{device.name}</td>
+                    <td className="py-2 text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        {getCompanyName(device.company_id)}
+                      </div>
+                    </td>
+                    <td className="py-2 text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {getSiteName(device.site_id)}
+                      </div>
+                    </td>
                     <td className="py-2 text-muted-foreground">{device.location || '--'}</td>
                     <td className="py-2 text-center">
                       <Badge variant={device.status === 'online' ? 'default' : 'secondary'} className="text-xs">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert
+  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert, Building2, MapPin, ChevronRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Json } from '@/integrations/supabase/types';
+import CompanySiteFilter from '@/components/CompanySiteFilter';
+import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 
 interface SensorData {
   device_id: string;
@@ -24,6 +26,8 @@ interface Device {
   device_id: string;
   name: string;
   location: string | null;
+  company_id: string | null;
+  site_id: string | null;
 }
 
 interface WebSocketAlert {
@@ -61,6 +65,18 @@ const TrendAnalysisPage = () => {
   const [timeRange, setTimeRange] = useState<string>('24h');
   const [loading, setLoading] = useState(true);
 
+  const {
+    companies,
+    filteredSites,
+    selectedCompanyId,
+    selectedSiteId,
+    setSelectedCompanyId,
+    setSelectedSiteId,
+    loading: filterLoading,
+    getCompanyName,
+    getSiteName,
+  } = useCompanySiteFilter();
+
   const getTimeRangeHours = () => {
     return TIME_RANGES.find(t => t.value === timeRange)?.hours || 24;
   };
@@ -85,7 +101,7 @@ const TrendAnalysisPage = () => {
           .select('*')
           .gte('recorded_at', startTime)
           .order('recorded_at', { ascending: true }),
-        supabase.from('devices').select('id, device_id, name, location'),
+        supabase.from('devices').select('id, device_id, name, location, company_id, site_id'),
         supabase
           .from('websocket_alerts')
           .select('*')
@@ -103,11 +119,27 @@ const TrendAnalysisPage = () => {
     }
   };
 
-  // Filter sensor data based on selected device
+  // Filter devices by company and site
+  const companyFilteredDevices = useMemo(() => {
+    let result = devices;
+    if (selectedCompanyId !== 'all') {
+      result = result.filter(d => d.company_id === selectedCompanyId);
+    }
+    if (selectedSiteId !== 'all') {
+      result = result.filter(d => d.site_id === selectedSiteId);
+    }
+    return result;
+  }, [devices, selectedCompanyId, selectedSiteId]);
+
+  // Filter sensor data based on company/site filtered devices and selected device
   const filteredSensorData = useMemo(() => {
-    if (selectedDevice === 'all') return sensorData;
-    return sensorData.filter(d => d.device_id === selectedDevice);
-  }, [sensorData, selectedDevice]);
+    const deviceIds = new Set(companyFilteredDevices.map(d => d.device_id));
+    let filtered = sensorData.filter(d => deviceIds.has(d.device_id));
+    if (selectedDevice !== 'all') {
+      filtered = filtered.filter(d => d.device_id === selectedDevice);
+    }
+    return filtered;
+  }, [sensorData, companyFilteredDevices, selectedDevice]);
 
   // Get selected device name
   const selectedDeviceName = useMemo(() => {
@@ -142,11 +174,15 @@ const TrendAnalysisPage = () => {
     };
   }, [filteredSensorData]);
 
-  // Filter WebSocket alerts based on selected device
+  // Filter WebSocket alerts based on company/site and selected device
   const filteredWsAlerts = useMemo(() => {
-    if (selectedDevice === 'all') return wsAlerts;
-    return wsAlerts.filter(a => a.device_id === selectedDevice);
-  }, [wsAlerts, selectedDevice]);
+    const deviceIds = new Set(companyFilteredDevices.map(d => d.device_id));
+    let filtered = wsAlerts.filter(a => !a.device_id || deviceIds.has(a.device_id));
+    if (selectedDevice !== 'all') {
+      filtered = filtered.filter(a => a.device_id === selectedDevice);
+    }
+    return filtered;
+  }, [wsAlerts, companyFilteredDevices, selectedDevice]);
 
   // WebSocket alert statistics by type
   const wsAlertStats = useMemo(() => {
@@ -253,7 +289,7 @@ const TrendAnalysisPage = () => {
       });
   }, [filteredSensorData, timeRange]);
 
-  if (loading) {
+  if (loading || filterLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
@@ -274,11 +310,22 @@ const TrendAnalysisPage = () => {
         
         {/* Selectors */}
         <div className="flex flex-wrap items-center gap-3">
+          {/* Company/Site Filter */}
+          <CompanySiteFilter
+            companies={companies}
+            filteredSites={filteredSites}
+            selectedCompanyId={selectedCompanyId}
+            selectedSiteId={selectedSiteId}
+            onCompanyChange={setSelectedCompanyId}
+            onSiteChange={setSelectedSiteId}
+            compact
+          />
+          
           {/* Time Range Selector */}
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
             <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-[120px] bg-card">
+              <SelectTrigger className="w-[100px] bg-card">
                 <SelectValue placeholder="時間範圍" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border z-50">
@@ -295,12 +342,12 @@ const TrendAnalysisPage = () => {
           <div className="flex items-center gap-2">
             <Monitor className="w-4 h-4 text-muted-foreground" />
             <Select value={selectedDevice} onValueChange={setSelectedDevice}>
-              <SelectTrigger className="w-[180px] bg-card">
+              <SelectTrigger className="w-[140px] bg-card">
                 <SelectValue placeholder="選擇設備" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border z-50">
                 <SelectItem value="all">全部設備</SelectItem>
-                {devices.map(device => (
+                {companyFilteredDevices.map(device => (
                   <SelectItem key={device.device_id} value={device.device_id}>
                     {device.name}
                   </SelectItem>
@@ -313,17 +360,29 @@ const TrendAnalysisPage = () => {
 
       {/* Current Selection Badge */}
       <div className="flex items-center gap-2 flex-wrap">
+        {(selectedCompanyId !== 'all' || selectedSiteId !== 'all') && (
+          <>
+            <Badge variant="outline" className="text-sm flex items-center gap-1">
+              <Building2 className="w-3 h-3" />
+              {selectedCompanyId === 'all' ? '全部公司' : getCompanyName(selectedCompanyId)}
+            </Badge>
+            {selectedSiteId !== 'all' && (
+              <>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                <Badge variant="outline" className="text-sm flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {getSiteName(selectedSiteId)}
+                </Badge>
+              </>
+            )}
+          </>
+        )}
         <Badge variant="outline" className="text-sm">
-          目前檢視: {selectedDeviceName}
+          設備: {selectedDeviceName}
         </Badge>
         <Badge variant="secondary" className="text-sm">
-          時間範圍: {getTimeRangeLabel()}
+          時間: {getTimeRangeLabel()}
         </Badge>
-        {selectedDevice !== 'all' && (
-          <Badge variant="secondary" className="text-xs">
-            單一設備
-          </Badge>
-        )}
       </div>
 
       {/* Environment Stats */}
