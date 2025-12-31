@@ -55,6 +55,30 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       device_alarm_thresholds: {
         Row: {
           created_at: string
@@ -130,6 +154,7 @@ export type Database = {
       devices: {
         Row: {
           battery: number | null
+          company_id: string | null
           created_at: string
           device_id: string
           id: string
@@ -139,11 +164,13 @@ export type Database = {
           mqtt_topic: string | null
           name: string
           signal_strength: number | null
+          site_id: string | null
           status: string
           updated_at: string
         }
         Insert: {
           battery?: number | null
+          company_id?: string | null
           created_at?: string
           device_id: string
           id?: string
@@ -153,11 +180,13 @@ export type Database = {
           mqtt_topic?: string | null
           name: string
           signal_strength?: number | null
+          site_id?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           battery?: number | null
+          company_id?: string | null
           created_at?: string
           device_id?: string
           id?: string
@@ -167,10 +196,26 @@ export type Database = {
           mqtt_topic?: string | null
           name?: string
           signal_strength?: number | null
+          site_id?: string | null
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "devices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devices_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feature_permissions: {
         Row: {
@@ -288,6 +333,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      sites: {
+        Row: {
+          address: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

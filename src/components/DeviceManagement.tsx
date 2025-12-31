@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Video, Wifi, WifiOff, Settings, Camera, Cctv, Webcam, ScanEye, LucideIcon, Bell, Thermometer, Droplets, Volume2, Wind } from 'lucide-react';
+import { X, Plus, Trash2, Video, Wifi, WifiOff, Settings, Camera, Cctv, Webcam, ScanEye, LucideIcon, Bell, Thermometer, Droplets, Volume2, Wind, Building2, MapPin, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+interface Company {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+interface Site {
+  id: string;
+  company_id: string;
+  name: string;
+  address: string | null;
+  description: string | null;
+}
 
 interface Device {
   id: string;
@@ -22,6 +37,8 @@ interface Device {
   status: string;
   location: string;
   mqtt_topic: string;
+  company_id: string | null;
+  site_id: string | null;
 }
 
 interface CameraItem {
@@ -68,6 +85,8 @@ const getCameraIcon = (iconType: string): LucideIcon => {
 };
 
 const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [cameras, setCameras] = useState<CameraItem[]>([]);
   const [alarmThresholds, setAlarmThresholds] = useState<AlarmThreshold[]>([]);
@@ -75,6 +94,8 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [showAddCamera, setShowAddCamera] = useState(false);
+  const [showAddCompany, setShowAddCompany] = useState(false);
+  const [showAddSite, setShowAddSite] = useState(false);
   const [savingAlarms, setSavingAlarms] = useState(false);
   
   // Form states
@@ -84,7 +105,21 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
     lat: '',
     lng: '',
     location: '',
-    mqtt_topic: ''
+    mqtt_topic: '',
+    company_id: '',
+    site_id: ''
+  });
+
+  const [newCompany, setNewCompany] = useState({
+    name: '',
+    description: ''
+  });
+
+  const [newSite, setNewSite] = useState({
+    company_id: '',
+    name: '',
+    address: '',
+    description: ''
   });
   
   const [newCamera, setNewCamera] = useState({
@@ -93,10 +128,12 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
     icon_type: 'camera'
   });
 
+  // Filter sites based on selected company
+  const filteredSites = sites.filter(s => s.company_id === newDevice.company_id);
+  const filteredSitesForNewSite = sites.filter(s => s.company_id === newSite.company_id);
+
   useEffect(() => {
-    fetchDevices();
-    fetchCameras();
-    fetchAlarmThresholds();
+    fetchData();
 
     // Subscribe to realtime updates
     const devicesChannel = supabase
@@ -120,12 +157,68 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
       })
       .subscribe();
 
+    const companiesChannel = supabase
+      .channel('companies-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => {
+        fetchCompanies();
+      })
+      .subscribe();
+
+    const sitesChannel = supabase
+      .channel('sites-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sites' }, () => {
+        fetchSites();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(devicesChannel);
       supabase.removeChannel(camerasChannel);
       supabase.removeChannel(alarmsChannel);
+      supabase.removeChannel(companiesChannel);
+      supabase.removeChannel(sitesChannel);
     };
   }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchCompanies(),
+      fetchSites(),
+      fetchDevices(),
+      fetchCameras(),
+      fetchAlarmThresholds()
+    ]);
+    setLoading(false);
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    }
+  };
+
+  const fetchSites = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sites')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setSites(data || []);
+    } catch (error) {
+      console.error('Error fetching sites:', error);
+    }
+  };
 
   const fetchDevices = async () => {
     try {
@@ -139,8 +232,6 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
     } catch (error) {
       console.error('Error fetching devices:', error);
       toast.error('載入設備失敗');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -207,9 +298,57 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
     }
   };
 
+  const handleAddCompany = async () => {
+    if (!newCompany.name.trim()) {
+      toast.error('請填寫公司名稱');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('companies').insert({
+        name: newCompany.name.trim(),
+        description: newCompany.description.trim() || null
+      });
+
+      if (error) throw error;
+
+      toast.success('公司新增成功');
+      setNewCompany({ name: '', description: '' });
+      setShowAddCompany(false);
+    } catch (error) {
+      console.error('Error adding company:', error);
+      toast.error('新增公司失敗');
+    }
+  };
+
+  const handleAddSite = async () => {
+    if (!newSite.company_id || !newSite.name.trim()) {
+      toast.error('請選擇公司並填寫工地名稱');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('sites').insert({
+        company_id: newSite.company_id,
+        name: newSite.name.trim(),
+        address: newSite.address.trim() || null,
+        description: newSite.description.trim() || null
+      });
+
+      if (error) throw error;
+
+      toast.success('工地新增成功');
+      setNewSite({ company_id: '', name: '', address: '', description: '' });
+      setShowAddSite(false);
+    } catch (error) {
+      console.error('Error adding site:', error);
+      toast.error('新增工地失敗');
+    }
+  };
+
   const handleAddDevice = async () => {
-    if (!newDevice.device_id || !newDevice.name) {
-      toast.error('請填寫必要欄位');
+    if (!newDevice.company_id || !newDevice.site_id || !newDevice.device_id || !newDevice.name) {
+      toast.error('請填寫必要欄位（公司、工地、設備ID、設備名稱）');
       return;
     }
 
@@ -223,13 +362,15 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
         mqtt_topic: newDevice.mqtt_topic || `device/${newDevice.device_id}`,
         status: 'offline',
         battery: 0,
-        signal_strength: 0
+        signal_strength: 0,
+        company_id: newDevice.company_id,
+        site_id: newDevice.site_id
       });
 
       if (error) throw error;
 
       toast.success('設備新增成功');
-      setNewDevice({ device_id: '', name: '', lat: '', lng: '', location: '', mqtt_topic: '' });
+      setNewDevice({ device_id: '', name: '', lat: '', lng: '', location: '', mqtt_topic: '', company_id: '', site_id: '' });
       setShowAddDevice(false);
     } catch (error) {
       console.error('Error adding device:', error);
@@ -255,6 +396,42 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
     } catch (error) {
       console.error('Error deleting device:', error);
       toast.error('刪除設備失敗');
+    }
+  };
+
+  const handleDeleteCompany = async (companyId: string) => {
+    if (!confirm('確定要刪除此公司嗎？這將同時刪除所有相關工地。')) return;
+
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', companyId);
+
+      if (error) throw error;
+
+      toast.success('公司已刪除');
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      toast.error('刪除公司失敗');
+    }
+  };
+
+  const handleDeleteSite = async (siteId: string) => {
+    if (!confirm('確定要刪除此工地嗎？')) return;
+
+    try {
+      const { error } = await supabase
+        .from('sites')
+        .delete()
+        .eq('id', siteId);
+
+      if (error) throw error;
+
+      toast.success('工地已刪除');
+    } catch (error) {
+      console.error('Error deleting site:', error);
+      toast.error('刪除工地失敗');
     }
   };
 
@@ -318,25 +495,34 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
     }
   };
 
-  const updateCameraIcon = async (camera: CameraItem, iconType: string) => {
-    try {
-      const { error } = await supabase
-        .from('cameras')
-        .update({ icon_type: iconType })
-        .eq('id', camera.id);
+  const getCompanyName = (companyId: string | null) => {
+    if (!companyId) return '未分配';
+    return companies.find(c => c.id === companyId)?.name || '未知公司';
+  };
 
-      if (error) throw error;
-
-      toast.success('攝影機圖示已更新');
-    } catch (error) {
-      console.error('Error updating camera icon:', error);
-      toast.error('更新攝影機圖示失敗');
-    }
+  const getSiteName = (siteId: string | null) => {
+    if (!siteId) return '未分配';
+    return sites.find(s => s.id === siteId)?.name || '未知工地';
   };
 
   const deviceCameras = selectedDevice 
     ? cameras.filter(c => c.device_id === selectedDevice.id)
     : [];
+
+  // Group devices by company and site
+  const groupedDevices = devices.reduce((acc, device) => {
+    const companyId = device.company_id || 'unassigned';
+    const siteId = device.site_id || 'unassigned';
+    
+    if (!acc[companyId]) {
+      acc[companyId] = {};
+    }
+    if (!acc[companyId][siteId]) {
+      acc[companyId][siteId] = [];
+    }
+    acc[companyId][siteId].push(device);
+    return acc;
+  }, {} as Record<string, Record<string, Device[]>>);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in duration-300">
@@ -349,7 +535,7 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-foreground">設備管理</h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">管理設備與攝影機</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">公司 / 工地 / 設備 分層管理</p>
             </div>
           </div>
           <Button variant="outline" onClick={onClose} className="gap-2">
@@ -362,9 +548,171 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden p-4 sm:p-6">
         <div className="max-w-7xl mx-auto h-full">
-
           <div className="flex-1 overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full">
+              
+              {/* Company & Site Management */}
+              <Card className="p-4 bg-secondary border-0 flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    公司 / 工地
+                  </h3>
+                  <div className="flex gap-1">
+                    <Dialog open={showAddCompany} onOpenChange={setShowAddCompany}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="gap-1 h-7 px-2 text-xs">
+                          <Plus className="w-3 h-3" />
+                          公司
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>新增公司</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-4">
+                          <div className="space-y-2">
+                            <Label>公司名稱 *</Label>
+                            <Input
+                              placeholder="例: 台北營造公司"
+                              value={newCompany.name}
+                              onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>描述</Label>
+                            <Input
+                              placeholder="選填"
+                              value={newCompany.description}
+                              onChange={(e) => setNewCompany({ ...newCompany, description: e.target.value })}
+                            />
+                          </div>
+                          <Button onClick={handleAddCompany} className="w-full">
+                            新增公司
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog open={showAddSite} onOpenChange={setShowAddSite}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="gap-1 h-7 px-2 text-xs">
+                          <Plus className="w-3 h-3" />
+                          工地
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>新增工地</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-4">
+                          <div className="space-y-2">
+                            <Label>隸屬公司 *</Label>
+                            <Select
+                              value={newSite.company_id}
+                              onValueChange={(value) => setNewSite({ ...newSite, company_id: value })}
+                            >
+                              <SelectTrigger className="bg-card">
+                                <SelectValue placeholder="選擇公司" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-card border-border z-50">
+                                {companies.map((company) => (
+                                  <SelectItem key={company.id} value={company.id}>
+                                    {company.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>工地名稱 *</Label>
+                            <Input
+                              placeholder="例: 內湖科技園區工地"
+                              value={newSite.name}
+                              onChange={(e) => setNewSite({ ...newSite, name: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>地址</Label>
+                            <Input
+                              placeholder="例: 台北市內湖區xxx路"
+                              value={newSite.address}
+                              onChange={(e) => setNewSite({ ...newSite, address: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>描述</Label>
+                            <Input
+                              placeholder="選填"
+                              value={newSite.description}
+                              onChange={(e) => setNewSite({ ...newSite, description: e.target.value })}
+                            />
+                          </div>
+                          <Button onClick={handleAddSite} className="w-full">
+                            新增工地
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+
+                <ScrollArea className="flex-1">
+                  {loading ? (
+                    <div className="text-center py-8 text-muted-foreground">載入中...</div>
+                  ) : companies.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      尚無公司，請先新增公司
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {companies.map((company) => {
+                        const companySites = sites.filter(s => s.company_id === company.id);
+                        return (
+                          <Card key={company.id} className="p-3 bg-background">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-primary" />
+                                <span className="font-medium text-sm">{company.name}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteCompany(company.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            {companySites.length > 0 ? (
+                              <div className="ml-4 space-y-1">
+                                {companySites.map((site) => (
+                                  <div key={site.id} className="flex items-center justify-between py-1 px-2 bg-muted/50 rounded text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="w-3 h-3 text-muted-foreground" />
+                                      <span>{site.name}</span>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-5 w-5 text-destructive hover:text-destructive"
+                                      onClick={() => handleDeleteSite(site.id)}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="ml-4 text-xs text-muted-foreground">尚無工地</div>
+                            )}
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </ScrollArea>
+              </Card>
+
               {/* Devices List */}
               <Card className="p-4 bg-secondary border-0 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
@@ -376,23 +724,72 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                         新增設備
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="max-w-lg">
                       <DialogHeader>
                         <DialogTitle>新增設備</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4 pt-4">
+                        {/* Company Selection */}
                         <div className="space-y-2">
-                          <Label>設備 ID *</Label>
-                          <Input
-                            placeholder="例: DEV-001"
-                            value={newDevice.device_id}
-                            onChange={(e) => setNewDevice({ ...newDevice, device_id: e.target.value })}
-                          />
+                          <Label className="flex items-center gap-2">
+                            <Building2 className="w-4 h-4" />
+                            隸屬公司 *
+                          </Label>
+                          <Select
+                            value={newDevice.company_id}
+                            onValueChange={(value) => setNewDevice({ ...newDevice, company_id: value, site_id: '' })}
+                          >
+                            <SelectTrigger className="bg-card">
+                              <SelectValue placeholder="選擇公司" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card border-border z-50">
+                              {companies.map((company) => (
+                                <SelectItem key={company.id} value={company.id}>
+                                  {company.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Site Selection */}
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4" />
+                            隸屬工地 *
+                          </Label>
+                          <Select
+                            value={newDevice.site_id}
+                            onValueChange={(value) => setNewDevice({ ...newDevice, site_id: value })}
+                            disabled={!newDevice.company_id}
+                          >
+                            <SelectTrigger className="bg-card">
+                              <SelectValue placeholder={newDevice.company_id ? "選擇工地" : "請先選擇公司"} />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card border-border z-50">
+                              {filteredSites.map((site) => (
+                                <SelectItem key={site.id} value={site.id}>
+                                  {site.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="border-t pt-4">
+                          <div className="space-y-2">
+                            <Label>設備 ID *</Label>
+                            <Input
+                              placeholder="例: DEV-001"
+                              value={newDevice.device_id}
+                              onChange={(e) => setNewDevice({ ...newDevice, device_id: e.target.value })}
+                            />
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <Label>設備名稱 *</Label>
                           <Input
-                            placeholder="例: 內湖工地監控站"
+                            placeholder="例: 環境監測站-A"
                             value={newDevice.name}
                             onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
                           />
@@ -491,8 +888,12 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                               </Button>
                             </div>
                           </div>
-                          <div className="mt-2 text-xs text-muted-foreground">
-                            {device.location} | MQTT: {device.mqtt_topic || '未設定'}
+                          <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            {getCompanyName(device.company_id)}
+                            <ChevronRight className="w-3 h-3" />
+                            <MapPin className="w-3 h-3" />
+                            {getSiteName(device.site_id)}
                           </div>
                         </Card>
                       ))}
@@ -615,8 +1016,8 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                 </ScrollArea>
               </Card>
 
-              {/* Alarm Settings Panel - Large */}
-              <Card className="p-4 bg-secondary border-0 flex flex-col lg:col-span-1">
+              {/* Alarm Settings Panel */}
+              <Card className="p-4 bg-secondary border-0 flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-foreground flex items-center gap-2">
                     <Bell className="w-4 h-4 text-warning" />
@@ -680,22 +1081,21 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                           >
                             <div className="flex items-center justify-between gap-4">
                               <div className="flex items-center gap-4 flex-1">
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                                   isEnabled 
                                     ? 'bg-gradient-to-br from-primary/20 to-primary/10 text-primary' 
                                     : 'bg-muted text-muted-foreground'
                                 }`}>
-                                  <Icon className="w-6 h-6" />
+                                  <Icon className="w-5 h-5" />
                                 </div>
                                 <div className="flex-1">
-                                  <div className="font-semibold text-base">{label}</div>
+                                  <div className="font-semibold text-sm">{label}</div>
                                   {isEnabled ? (
-                                    <div className="flex items-center gap-2 mt-2">
-                                      <span className="text-xs text-muted-foreground">閾值:</span>
+                                    <div className="flex items-center gap-2 mt-1">
                                       <Input
                                         type="number"
                                         value={currentValue}
-                                        className="h-8 w-24 text-sm font-medium"
+                                        className="h-7 w-20 text-xs font-medium"
                                         disabled={savingAlarms}
                                         onChange={(e) => {
                                           const newValue = parseFloat(e.target.value) || 0;
@@ -722,10 +1122,10 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                                           updateAlarmThreshold(selectedDevice.device_id, metricType, newValue, true);
                                         }}
                                       />
-                                      <span className="text-sm font-medium text-muted-foreground">{unit}</span>
+                                      <span className="text-xs text-muted-foreground">{unit}</span>
                                     </div>
                                   ) : (
-                                    <div className="text-sm text-muted-foreground mt-1">警報未啟用</div>
+                                    <div className="text-xs text-muted-foreground mt-1">未啟用</div>
                                   )}
                                 </div>
                               </div>
