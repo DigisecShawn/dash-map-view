@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
@@ -166,6 +167,18 @@ const Dashboard = () => {
       maxPower: Math.round(maxPower * 100) / 100,
       activeDevices: devicesWithSolar.length,
     };
+  }, [filteredDevices]);
+
+  // Solar chart data
+  const solarChartData = useMemo(() => {
+    return filteredDevices
+      .filter(d => d.current_solar_power !== null)
+      .map(d => ({
+        name: d.name.length > 8 ? d.name.substring(0, 8) + '...' : d.name,
+        fullName: d.name,
+        power: d.current_solar_power || 0,
+      }))
+      .sort((a, b) => b.power - a.power);
   }, [filteredDevices]);
 
   // Sensor-based active alarms (filtered by device)
@@ -375,52 +388,75 @@ const Dashboard = () => {
 
       {/* Solar Power Stats & Active Alarms */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Solar Power Statistics */}
+        {/* Solar Power Statistics Chart */}
         <Card className="bg-gradient-to-br from-yellow-500/5 to-orange-500/5 border-yellow-500/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Sun className="w-4 h-4 text-yellow-500" />
               太陽能發電統計
               <Badge variant="outline" className="ml-auto text-xs">
-                {deviceStats.total} 台設備
+                總計 {solarStats.totalPower} kW
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              {/* Total Power */}
-              <div className="p-4 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-5 h-5 text-yellow-500" />
-                  <span className="text-sm text-muted-foreground">總發電量</span>
-                </div>
-                <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
-                  {solarStats.totalPower}
-                  <span className="text-lg font-normal ml-1">kW</span>
-                </p>
+            {solarChartData.length === 0 ? (
+              <div className="flex items-center justify-center h-48 text-muted-foreground">
+                <p>目前沒有太陽能發電數據</p>
               </div>
-              
-              {/* Average Power */}
-              <div className="p-4 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl border border-orange-500/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <Activity className="w-5 h-5 text-orange-500" />
-                  <span className="text-sm text-muted-foreground">平均發電量</span>
-                </div>
-                <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-                  {solarStats.avgPower}
-                  <span className="text-lg font-normal ml-1">kW</span>
-                </p>
+            ) : (
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={solarChartData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis 
+                      type="number" 
+                      unit=" kW" 
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
+                    <YAxis 
+                      type="category" 
+                      dataKey="name" 
+                      width={70}
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [`${value} kW`, '發電量']}
+                      labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <Bar dataKey="power" radius={[0, 4, 4, 0]}>
+                      {solarChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={`hsl(${45 - index * 8}, 90%, ${55 + index * 3}%)`}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-            </div>
+            )}
             
-            {/* Additional Stats */}
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
-                <span className="text-sm text-muted-foreground">最高發電量</span>
-                <span className="font-semibold">{solarStats.maxPower} kW</span>
+            {/* Summary Stats */}
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="flex flex-col items-center p-2 bg-yellow-500/10 rounded-lg">
+                <span className="text-xs text-muted-foreground">平均</span>
+                <span className="font-semibold text-yellow-600 dark:text-yellow-400">{solarStats.avgPower} kW</span>
               </div>
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
-                <span className="text-sm text-muted-foreground">發電中設備</span>
+              <div className="flex flex-col items-center p-2 bg-orange-500/10 rounded-lg">
+                <span className="text-xs text-muted-foreground">最高</span>
+                <span className="font-semibold text-orange-600 dark:text-orange-400">{solarStats.maxPower} kW</span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-muted/30 rounded-lg">
+                <span className="text-xs text-muted-foreground">發電中</span>
                 <span className="font-semibold">{solarStats.activeDevices} 台</span>
               </div>
             </div>
