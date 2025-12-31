@@ -121,6 +121,7 @@ export type Database = {
           pm25: number | null
           recorded_at: string
           signal_strength: number | null
+          solar_power: number | null
           temperature: number | null
         }
         Insert: {
@@ -134,6 +135,7 @@ export type Database = {
           pm25?: number | null
           recorded_at?: string
           signal_strength?: number | null
+          solar_power?: number | null
           temperature?: number | null
         }
         Update: {
@@ -147,6 +149,7 @@ export type Database = {
           pm25?: number | null
           recorded_at?: string
           signal_strength?: number | null
+          solar_power?: number | null
           temperature?: number | null
         }
         Relationships: []
@@ -156,6 +159,7 @@ export type Database = {
           battery: number | null
           company_id: string | null
           created_at: string
+          current_solar_power: number | null
           device_id: string
           id: string
           lat: number
@@ -172,6 +176,7 @@ export type Database = {
           battery?: number | null
           company_id?: string | null
           created_at?: string
+          current_solar_power?: number | null
           device_id: string
           id?: string
           lat: number
@@ -188,6 +193,7 @@ export type Database = {
           battery?: number | null
           company_id?: string | null
           created_at?: string
+          current_solar_power?: number | null
           device_id?: string
           id?: string
           lat?: number
