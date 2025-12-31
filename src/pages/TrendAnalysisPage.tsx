@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { Json } from '@/integrations/supabase/types';
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
@@ -56,6 +56,76 @@ const TIME_RANGES = [
   { value: '12h', label: '12 小時', hours: 12 },
   { value: '24h', label: '24 小時', hours: 24 },
   { value: '7d', label: '7 天', hours: 168 },
+];
+
+// Generate mock data for demonstration
+const generateMockTrendData = (timeRange: string) => {
+  const is7Days = timeRange === '7d';
+  const points = is7Days ? 7 : 12;
+  const now = new Date();
+  
+  return Array.from({ length: points }, (_, i) => {
+    const date = new Date(now);
+    if (is7Days) {
+      date.setDate(date.getDate() - (points - 1 - i));
+    } else {
+      date.setHours(date.getHours() - (points - 1 - i) * 2);
+    }
+    
+    const timeKey = is7Days 
+      ? date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
+      : date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+    
+    return {
+      time: timeKey,
+      temperature: Math.round((25 + Math.sin(i * 0.5) * 5 + Math.random() * 2) * 10) / 10,
+      humidity: Math.round((60 + Math.cos(i * 0.3) * 15 + Math.random() * 5) * 10) / 10,
+      pm25: Math.round((35 + Math.sin(i * 0.4) * 20 + Math.random() * 10) * 10) / 10,
+      pm10: Math.round((50 + Math.cos(i * 0.35) * 25 + Math.random() * 15) * 10) / 10,
+      noise: Math.round((65 + Math.sin(i * 0.6) * 10 + Math.random() * 5) * 10) / 10,
+      solar: Math.round((3 + Math.sin(i * 0.4) * 2 + Math.random()) * 10) / 10,
+    };
+  });
+};
+
+const generateMockAlertData = (timeRange: string) => {
+  const is7Days = timeRange === '7d';
+  const points = is7Days ? 7 : 8;
+  const now = new Date();
+  
+  return Array.from({ length: points }, (_, i) => {
+    const date = new Date(now);
+    if (is7Days) {
+      date.setDate(date.getDate() - (points - 1 - i));
+    } else {
+      date.setHours(date.getHours() - (points - 1 - i) * 3);
+    }
+    
+    const timeKey = is7Days 
+      ? date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
+      : date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+    
+    return {
+      time: timeKey,
+      count: Math.floor(Math.random() * 8) + 1,
+    };
+  });
+};
+
+const generateMockAlertStats = () => [
+  { type: 'no_helmet', label: '未戴安全帽', count: 12 },
+  { type: 'no_vest', label: '未穿反光背心', count: 8 },
+  { type: 'intrusion', label: '入侵偵測', count: 3 },
+  { type: 'fire_smoke', label: '煙霧偵測', count: 1 },
+  { type: 'fall_detection', label: '跌倒偵測', count: 2 },
+];
+
+const generateMockSiteDistribution = () => [
+  { id: '1', name: '內湖汙水處理廠', total: 15, error: 5, warning: 10 },
+  { id: '2', name: '松山捷運站工地', total: 12, error: 4, warning: 8 },
+  { id: '3', name: '板橋車站雙子星', total: 9, error: 2, warning: 7 },
+  { id: '4', name: '新莊土地重劃區', total: 6, error: 1, warning: 5 },
+  { id: '5', name: '新店道路拓寬', total: 4, error: 1, warning: 3 },
 ];
 
 const TrendAnalysisPage = () => {
@@ -187,6 +257,7 @@ const TrendAnalysisPage = () => {
 
   // WebSocket alert statistics by type
   const wsAlertStats = useMemo(() => {
+    if (filteredWsAlerts.length === 0) return generateMockAlertStats();
     const stats: Record<string, number> = {};
     filteredWsAlerts.forEach(alert => {
       stats[alert.alert_type] = (stats[alert.alert_type] || 0) + 1;
@@ -200,6 +271,7 @@ const TrendAnalysisPage = () => {
 
   // WebSocket alert trend data
   const wsAlertTrendData = useMemo(() => {
+    if (filteredWsAlerts.length === 0) return generateMockAlertData(timeRange);
     const grouped: { [key: string]: number } = {};
     const is7Days = timeRange === '7d';
     
@@ -218,8 +290,9 @@ const TrendAnalysisPage = () => {
       .map(([time, count]) => ({ time, count }));
   }, [filteredWsAlerts, timeRange]);
 
-  // Site alert distribution data (for all alerts, not filtered)
+  // Site alert distribution data
   const siteAlertDistribution = useMemo(() => {
+    if (wsAlerts.length === 0) return generateMockSiteDistribution();
     const siteStats: Record<string, { name: string; total: number; error: number; warning: number }> = {};
     
     wsAlerts.forEach(alert => {
@@ -249,11 +322,12 @@ const TrendAnalysisPage = () => {
     }));
   }, [siteAlertDistribution]);
 
-
   const SITE_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1'];
 
-  // Trend chart data
+  // Trend chart data with mock fallback
   const trendData = useMemo(() => {
+    if (filteredSensorData.length === 0) return generateMockTrendData(timeRange);
+    
     const grouped: { [key: string]: SensorData[] } = {};
     const is7Days = timeRange === '7d';
     
@@ -292,6 +366,10 @@ const TrendAnalysisPage = () => {
       });
   }, [filteredSensorData, timeRange]);
 
+  // Check if using mock data
+  const isUsingMockData = filteredSensorData.length === 0;
+  const isUsingMockAlerts = filteredWsAlerts.length === 0;
+
   if (loading || filterLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -301,8 +379,9 @@ const TrendAnalysisPage = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-primary" />
@@ -311,9 +390,8 @@ const TrendAnalysisPage = () => {
           <p className="text-muted-foreground">{getTimeRangeLabel()}環境監測數據趨勢與統計</p>
         </div>
         
-        {/* Selectors */}
+        {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Company/Site Filter */}
           <CompanySiteFilter
             companies={companies}
             filteredSites={filteredSites}
@@ -324,7 +402,6 @@ const TrendAnalysisPage = () => {
             compact
           />
           
-          {/* Time Range Selector */}
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
             <Select value={timeRange} onValueChange={setTimeRange}>
@@ -341,7 +418,6 @@ const TrendAnalysisPage = () => {
             </Select>
           </div>
           
-          {/* Device Selector */}
           <div className="flex items-center gap-2">
             <Monitor className="w-4 h-4 text-muted-foreground" />
             <Select value={selectedDevice} onValueChange={setSelectedDevice}>
@@ -386,117 +462,234 @@ const TrendAnalysisPage = () => {
         <Badge variant="secondary" className="text-sm">
           時間: {getTimeRangeLabel()}
         </Badge>
+        {(isUsingMockData || isUsingMockAlerts) && (
+          <Badge variant="outline" className="text-sm text-muted-foreground border-dashed">
+            展示模擬數據
+          </Badge>
+        )}
       </div>
 
-      {/* AI Detection Alert Statistics - MOVED TO TOP */}
-      {filteredWsAlerts.length > 0 && (
-        <>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-destructive" />
-                AI 偵測警報統計
-                <Badge variant="outline" className="ml-auto text-xs">
-                  {filteredWsAlerts.length} 筆警報
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {wsAlertStats.map(stat => (
-                  <div key={stat.type} className="p-3 bg-gradient-to-br from-destructive/10 to-orange-500/10 rounded-lg border border-destructive/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-destructive" />
-                      <span className="text-sm font-medium truncate">{stat.label}</span>
-                    </div>
-                    <div className="text-2xl font-bold text-destructive">{stat.count}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+      {/* Environment Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/5 border-orange-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Thermometer className="w-4 h-4 text-orange-500" />
+              <span className="text-sm text-muted-foreground">溫度</span>
+            </div>
+            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+              {envStats?.temperature?.avg ?? trendData[trendData.length - 1]?.temperature ?? '--'}°C
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-cyan-500/10 to-blue-500/5 border-cyan-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Droplets className="w-4 h-4 text-cyan-500" />
+              <span className="text-sm text-muted-foreground">濕度</span>
+            </div>
+            <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+              {envStats?.humidity?.avg ?? trendData[trendData.length - 1]?.humidity ?? '--'}%
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border-blue-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Wind className="w-4 h-4 text-blue-500" />
+              <span className="text-sm text-muted-foreground">PM2.5</span>
+            </div>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {envStats?.pm25?.avg ?? trendData[trendData.length - 1]?.pm25 ?? '--'}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Wind className="w-4 h-4 text-green-500" />
+              <span className="text-sm text-muted-foreground">PM10</span>
+            </div>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {envStats?.pm10?.avg ?? trendData[trendData.length - 1]?.pm10 ?? '--'}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/5 border-purple-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Volume2 className="w-4 h-4 text-purple-500" />
+              <span className="text-sm text-muted-foreground">噪音</span>
+            </div>
+            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              {envStats?.noise?.avg ?? trendData[trendData.length - 1]?.noise ?? '--'} dB
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Alert Trend Chart */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-destructive" />
-                  AI 偵測警報趨勢
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={wsAlertTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                      <YAxis tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number) => [`${value} 次`, '警報次數']}
-                      />
-                      <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Alert Type Distribution */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-warning" />
-                  警報類型分佈
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={wsAlertStats} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis type="number" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                      <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={80} className="text-muted-foreground" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number) => [`${value} 次`, '次數']}
-                      />
-                      <Bar dataKey="count" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      )}
-
-      {/* Solar Power Trend Chart */}
-      {trendData.length > 0 && trendData.some(d => d.solar !== null) && (
+      {/* Main Charts Grid - 2x2 Layout */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Temperature & Humidity Chart */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <Sun className="w-4 h-4 text-yellow-500" />
-              太陽能發電趨勢
+              <Thermometer className="w-4 h-4 text-orange-500" />
+              溫溼度趨勢
               <div className="ml-auto flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-0.5 bg-yellow-500 rounded" />
-                  <span className="text-muted-foreground">發電量 (kW)</span>
+                  <div className="w-3 h-0.5 bg-orange-500 rounded" />
+                  <span className="text-muted-foreground">溫度</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5 bg-cyan-500 rounded" />
+                  <span className="text-muted-foreground">濕度</span>
                 </div>
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="humidGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis yAxisId="temp" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="°C" orientation="left" />
+                  <YAxis yAxisId="humid" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="%" orientation="right" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number, name: string) => {
+                      if (name === 'temperature') return [`${value}°C`, '溫度'];
+                      if (name === 'humidity') return [`${value}%`, '濕度'];
+                      return [value, name];
+                    }}
+                  />
+                  <Area yAxisId="temp" type="monotone" dataKey="temperature" stroke="#f97316" fill="url(#tempGradient)" strokeWidth={2} name="temperature" />
+                  <Area yAxisId="humid" type="monotone" dataKey="humidity" stroke="#06b6d4" fill="url(#humidGradient)" strokeWidth={2} name="humidity" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Air Quality Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wind className="w-4 h-4 text-blue-500" />
+              空氣品質趨勢
+              <div className="ml-auto flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5 bg-blue-500 rounded" />
+                  <span className="text-muted-foreground">PM2.5</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5 bg-green-500 rounded" />
+                  <span className="text-muted-foreground">PM10</span>
+                </div>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="pm25Gradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="pm10Gradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="μg/m³" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number, name: string) => {
+                      const labels: Record<string, string> = { pm25: 'PM2.5', pm10: 'PM10' };
+                      return [`${value} μg/m³`, labels[name] || name];
+                    }}
+                  />
+                  <Area type="monotone" dataKey="pm25" stroke="#3b82f6" fill="url(#pm25Gradient)" strokeWidth={2} name="pm25" />
+                  <Area type="monotone" dataKey="pm10" stroke="#22c55e" fill="url(#pm10Gradient)" strokeWidth={2} name="pm10" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Noise Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-purple-500" />
+              噪音趨勢
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="noiseGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="dB" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number) => [`${value} dB`, '噪音']}
+                  />
+                  <Area type="monotone" dataKey="noise" stroke="#a855f7" fill="url(#noiseGradient)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Solar Power Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sun className="w-4 h-4 text-yellow-500" />
+              太陽能發電趨勢
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData}>
                   <defs>
@@ -505,9 +698,9 @@ const TrendAnalysisPage = () => {
                       <stop offset="95%" stopColor="#eab308" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                  <YAxis tick={{ fontSize: 10 }} unit=" kW" className="text-muted-foreground" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit=" kW" />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
@@ -522,205 +715,91 @@ const TrendAnalysisPage = () => {
             </div>
           </CardContent>
         </Card>
-      )}
+      </div>
 
-      {/* Environment Trend Charts */}
-      {trendData.length > 0 ? (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Thermometer className="w-4 h-4 text-orange-500" />
-                溫溼度趨勢
-                <div className="ml-auto flex items-center gap-3 text-xs">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-0.5 bg-orange-500 rounded" />
-                    <span className="text-muted-foreground">溫度</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-0.5 bg-cyan-500 rounded" />
-                    <span className="text-muted-foreground">濕度</span>
-                  </div>
+      {/* AI Detection Alert Section */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5 text-destructive" />
+          AI 偵測警報分析
+          {isUsingMockAlerts && (
+            <Badge variant="outline" className="text-xs text-muted-foreground border-dashed ml-2">
+              模擬數據
+            </Badge>
+          )}
+        </h2>
+        
+        {/* Alert Statistics */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {wsAlertStats.map(stat => (
+            <Card key={stat.type} className="bg-gradient-to-br from-destructive/10 to-orange-500/5 border-destructive/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                  <span className="text-sm font-medium truncate">{stat.label}</span>
                 </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData}>
-                    <defs>
-                      <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="humidGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis yAxisId="temp" tick={{ fontSize: 10 }} unit="°C" className="text-muted-foreground" orientation="left" />
-                    <YAxis yAxisId="humid" tick={{ fontSize: 10 }} unit="%" className="text-muted-foreground" orientation="right" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number, name: string) => {
-                        if (name === 'temperature') return [`${value}°C`, '溫度'];
-                        if (name === 'humidity') return [`${value}%`, '濕度'];
-                        return [value, name];
-                      }}
-                    />
-                    <Area yAxisId="temp" type="monotone" dataKey="temperature" stroke="#f97316" fill="url(#tempGradient)" strokeWidth={2} name="temperature" />
-                    <Area yAxisId="humid" type="monotone" dataKey="humidity" stroke="#06b6d4" fill="url(#humidGradient)" strokeWidth={2} name="humidity" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Wind className="w-4 h-4 text-blue-500" />
-                空氣品質趨勢
-                <div className="ml-auto flex items-center gap-3 text-xs">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-0.5 bg-blue-500 rounded" />
-                    <span className="text-muted-foreground">PM2.5</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-0.5 bg-green-500 rounded" />
-                    <span className="text-muted-foreground">PM10</span>
-                  </div>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData}>
-                    <defs>
-                      <linearGradient id="pm25Gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="pm10Gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} unit="μg/m³" className="text-muted-foreground" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number, name: string) => {
-                        const labels: Record<string, string> = { pm25: 'PM2.5', pm10: 'PM10' };
-                        return [`${value} μg/m³`, labels[name] || name];
-                      }}
-                    />
-                    <Area type="monotone" dataKey="pm25" stroke="#3b82f6" fill="url(#pm25Gradient)" strokeWidth={2} name="pm25" />
-                    <Area type="monotone" dataKey="pm10" stroke="#22c55e" fill="url(#pm10Gradient)" strokeWidth={2} name="pm10" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Volume2 className="w-4 h-4 text-purple-500" />
-                噪音趨勢
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData}>
-                    <defs>
-                      <linearGradient id="noiseGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 10 }} unit="dB" className="text-muted-foreground" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Area type="monotone" dataKey="noise" stroke="#a855f7" fill="url(#noiseGradient)" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="text-2xl font-bold text-destructive">{stat.count}</div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      ) : (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            <p>所選設備目前沒有趨勢數據</p>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Site Distribution Charts - Only show if there are alerts */}
-      {filteredWsAlerts.length > 0 && (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {/* Site Alert Bar Chart */}
-          <Card className="xl:col-span-2">
+        {/* Alert Charts Grid */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Alert Trend Chart */}
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-primary" />
-                各工地警報統計
+                <TrendingUp className="w-4 h-4 text-destructive" />
+                警報趨勢
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={siteAlertDistribution} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                    <YAxis 
-                      type="category" 
-                      dataKey="name" 
-                      tick={{ fontSize: 10 }} 
-                      width={120} 
-                      className="text-muted-foreground"
-                      tickFormatter={(value) => value.length > 12 ? value.substring(0, 12) + '...' : value}
-                    />
+                  <BarChart data={wsAlertTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
                       }}
-                      formatter={(value: number, name: string) => {
-                        const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
-                        return [`${value} 次`, labels[name] || name];
-                      }}
+                      formatter={(value: number) => [`${value} 次`, '警報次數']}
                     />
-                    <Legend 
-                      formatter={(value) => {
-                        const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
-                        return labels[value] || value;
+                    <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Alert Type Distribution */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-warning" />
+                警報類型分佈
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={wsAlertStats} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis type="category" dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={80} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
                       }}
+                      formatter={(value: number) => [`${value} 次`, '次數']}
                     />
-                    <Bar dataKey="error" stackId="a" fill="hsl(var(--destructive))" name="error" />
-                    <Bar dataKey="warning" stackId="a" fill="hsl(var(--warning))" name="warning" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="count" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -736,7 +815,7 @@ const TrendAnalysisPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -771,7 +850,53 @@ const TrendAnalysisPage = () => {
             </CardContent>
           </Card>
         </div>
-      )}
+
+        {/* Site Alert Bar Chart - Full Width */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              各工地警報統計
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={siteAlertDistribution} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
+                    width={120}
+                    tickFormatter={(value) => value.length > 12 ? value.substring(0, 12) + '...' : value}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number, name: string) => {
+                      const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
+                      return [`${value} 次`, labels[name] || name];
+                    }}
+                  />
+                  <Legend 
+                    formatter={(value) => {
+                      const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
+                      return labels[value] || value;
+                    }}
+                  />
+                  <Bar dataKey="error" stackId="a" fill="hsl(var(--destructive))" name="error" />
+                  <Bar dataKey="warning" stackId="a" fill="hsl(var(--warning))" name="warning" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
