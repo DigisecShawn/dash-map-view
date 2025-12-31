@@ -4,9 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import Index from "./pages/Index";
-import AlarmHistory from "./pages/AlarmHistory";
+import AppLayout from "@/components/AppLayout";
 import Dashboard from "./pages/Dashboard";
+import MapPage from "./pages/MapPage";
+import DeviceManagementPage from "./pages/DeviceManagementPage";
+import NotificationSettingsPage from "./pages/NotificationSettingsPage";
+import AlarmHistory from "./pages/AlarmHistory";
+import WebSocketSettings from "./pages/WebSocketSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,9 +23,14 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/alarm-history" element={<AlarmHistory />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/map" element={<MapPage />} />
+              <Route path="/devices" element={<DeviceManagementPage />} />
+              <Route path="/notifications" element={<NotificationSettingsPage />} />
+              <Route path="/alarm-history" element={<AlarmHistory />} />
+              <Route path="/websocket" element={<WebSocketSettings />} />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

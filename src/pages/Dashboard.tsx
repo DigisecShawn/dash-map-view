@@ -1,16 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   Monitor, Wifi, WifiOff, Thermometer, Droplets, Wind, Volume2, 
-  TrendingUp, AlertTriangle, ArrowLeft, Activity, BarChart3
+  TrendingUp, AlertTriangle, Activity, BarChart3
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
-import ThemeToggle from '@/components/ThemeToggle';
 
 interface Device {
   id: string;
@@ -198,24 +195,11 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-primary" />
-              <h1 className="text-xl font-bold">數據儀表板</h1>
-            </div>
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">數據儀表板</h1>
+        <p className="text-muted-foreground">即時設備監控與環境數據總覽</p>
+      </div>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Device Overview */}
@@ -574,7 +558,7 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 };
