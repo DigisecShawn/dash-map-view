@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Mail, MessageSquare, Phone, Save, TestTube, CheckCircle, XCircle, Settings, Shield, Zap } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Phone, Save, TestTube, CheckCircle, XCircle, Settings, Shield, Zap, Camera, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -23,7 +24,12 @@ const NotificationSettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
 
-  const [lineConfig, setLineConfig] = useState({ channel_access_token: '', user_id: '' });
+  const [lineConfig, setLineConfig] = useState({ 
+    channel_access_token: '', 
+    user_id: '',
+    custom_message: '⚠️ 警報通知\n設備：{device_name}\n訊息：{message}\n時間：{timestamp}',
+    include_screenshot: false,
+  });
   const [emailConfig, setEmailConfig] = useState({ api_key: '', from_email: '', to_email: '' });
   const [smsConfig, setSmsConfig] = useState({ account_sid: '', auth_token: '', from_number: '', to_number: '' });
 
@@ -49,27 +55,29 @@ const NotificationSettingsPage = () => {
         setChannels(mappedChannels);
         
         mappedChannels.forEach(channel => {
-          const config = channel.config as Record<string, string>;
+          const config = channel.config as Record<string, unknown>;
           switch (channel.channel) {
             case 'line':
               setLineConfig({
-                channel_access_token: config.channel_access_token || '',
-                user_id: config.user_id || '',
+                channel_access_token: (config.channel_access_token as string) || '',
+                user_id: (config.user_id as string) || '',
+                custom_message: (config.custom_message as string) || '⚠️ 警報通知\n設備：{device_name}\n訊息：{message}\n時間：{timestamp}',
+                include_screenshot: (config.include_screenshot as boolean) || false,
               });
               break;
             case 'email':
               setEmailConfig({
-                api_key: config.api_key || '',
-                from_email: config.from_email || '',
-                to_email: config.to_email || '',
+                api_key: (config.api_key as string) || '',
+                from_email: (config.from_email as string) || '',
+                to_email: (config.to_email as string) || '',
               });
               break;
             case 'sms':
               setSmsConfig({
-                account_sid: config.account_sid || '',
-                auth_token: config.auth_token || '',
-                from_number: config.from_number || '',
-                to_number: config.to_number || '',
+                account_sid: (config.account_sid as string) || '',
+                auth_token: (config.auth_token as string) || '',
+                from_number: (config.from_number as string) || '',
+                to_number: (config.to_number as string) || '',
               });
               break;
           }
@@ -83,7 +91,7 @@ const NotificationSettingsPage = () => {
     }
   };
 
-  const handleSave = async (channelType: string, config: Record<string, string>) => {
+  const handleSave = async (channelType: string, config: Record<string, string | boolean>) => {
     setSaving(true);
     try {
       const existing = channels.find(c => c.channel === channelType);
@@ -91,13 +99,13 @@ const NotificationSettingsPage = () => {
       if (existing) {
         const { error } = await supabase
           .from('notification_settings')
-          .update({ config })
+          .update({ config: JSON.parse(JSON.stringify(config)) })
           .eq('id', existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('notification_settings')
-          .insert({ channel: channelType, config, enabled: false });
+          .insert([{ channel: channelType, config: JSON.parse(JSON.stringify(config)), enabled: false }]);
         if (error) throw error;
       }
 
@@ -289,6 +297,38 @@ const NotificationSettingsPage = () => {
                   value={lineConfig.user_id}
                   onChange={e => setLineConfig(prev => ({ ...prev, user_id: e.target.value }))}
                   className="h-9 text-sm"
+                />
+              </div>
+              
+              <Separator className="my-2" />
+              
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                  <Label className="text-xs">自定義警報訊息</Label>
+                </div>
+                <Textarea
+                  placeholder="輸入警報訊息範本"
+                  value={lineConfig.custom_message}
+                  onChange={e => setLineConfig(prev => ({ ...prev, custom_message: e.target.value }))}
+                  className="text-sm min-h-[80px] resize-none"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  可用變數：{'{device_name}'} 設備名稱、{'{message}'} 警報訊息、{'{timestamp}'} 時間
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <span className="text-sm font-medium">附加攝影機截圖</span>
+                    <p className="text-[10px] text-muted-foreground">警報時自動附加設備攝影機快照</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={lineConfig.include_screenshot}
+                  onCheckedChange={checked => setLineConfig(prev => ({ ...prev, include_screenshot: checked }))}
                 />
               </div>
             </div>
