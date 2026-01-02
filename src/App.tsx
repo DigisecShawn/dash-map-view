@@ -26,11 +26,14 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Standalone pages without navigation */}
             <Route path="/map-login" element={<MapLoginPage />} />
+            <Route path="/map" element={<MapPage />} />
+            
+            {/* Pages with navigation layout */}
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/trends" element={<TrendAnalysisPage />} />
-              <Route path="/map" element={<MapPage />} />
               <Route path="/organizations" element={<OrganizationManagementPage />} />
               <Route path="/devices" element={<DeviceManagementPage />} />
               <Route path="/notifications" element={<NotificationSettingsPage />} />
