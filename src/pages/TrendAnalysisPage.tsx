@@ -599,6 +599,187 @@ const TrendAnalysisPage = () => {
         </Card>
       </div>
 
+      {/* AI Detection Alert Section */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5 text-destructive" />
+          AI 偵測警報分析
+          {isUsingMockAlerts && (
+            <Badge variant="outline" className="text-xs text-muted-foreground border-dashed ml-2">
+              模擬數據
+            </Badge>
+          )}
+        </h2>
+        
+        {/* Alert Statistics */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {wsAlertStats.map(stat => (
+            <Card key={stat.type} className="bg-gradient-to-br from-destructive/10 to-orange-500/5 border-destructive/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                  <span className="text-sm font-medium truncate">{stat.label}</span>
+                </div>
+                <div className="text-2xl font-bold text-destructive">{stat.count}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Alert Charts Grid */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Alert Trend Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-destructive" />
+                警報趨勢
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={wsAlertTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value: number) => [`${value} 次`, '警報次數']}
+                    />
+                    <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Alert Type Distribution */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-warning" />
+                警報類型分佈
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={wsAlertStats} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis type="category" dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={80} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value: number) => [`${value} 次`, '次數']}
+                    />
+                    <Bar dataKey="count" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Site Alert Pie Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-purple-500" />
+                工地警報佔比
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sitePieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {sitePieData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value: number, _: string, props: any) => [
+                        `${value} 次警報`,
+                        props.payload.fullName
+                      ]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Site Alert Bar Chart - Full Width */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              各工地警報統計
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={siteAlertDistribution} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
+                    width={120}
+                    tickFormatter={(value) => value.length > 12 ? value.substring(0, 12) + '...' : value}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number, name: string) => {
+                      const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
+                      return [`${value} 次`, labels[name] || name];
+                    }}
+                  />
+                  <Legend 
+                    formatter={(value) => {
+                      const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
+                      return labels[value] || value;
+                    }}
+                  />
+                  <Bar dataKey="error" stackId="a" fill="hsl(var(--destructive))" name="error" />
+                  <Bar dataKey="warning" stackId="a" fill="hsl(var(--warning))" name="warning" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Main Charts Grid - 2x2 Layout */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Temperature & Humidity Chart */}
@@ -778,187 +959,6 @@ const TrendAnalysisPage = () => {
                   />
                   <Area type="monotone" dataKey="solar" stroke="#eab308" fill="url(#solarGradient)" strokeWidth={2} name="solar" />
                 </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* AI Detection Alert Section */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <ShieldAlert className="w-5 h-5 text-destructive" />
-          AI 偵測警報分析
-          {isUsingMockAlerts && (
-            <Badge variant="outline" className="text-xs text-muted-foreground border-dashed ml-2">
-              模擬數據
-            </Badge>
-          )}
-        </h2>
-        
-        {/* Alert Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {wsAlertStats.map(stat => (
-            <Card key={stat.type} className="bg-gradient-to-br from-destructive/10 to-orange-500/5 border-destructive/20">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-4 h-4 text-destructive" />
-                  <span className="text-sm font-medium truncate">{stat.label}</span>
-                </div>
-                <div className="text-2xl font-bold text-destructive">{stat.count}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Alert Charts Grid */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Alert Trend Chart */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-destructive" />
-                警報趨勢
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={wsAlertTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`${value} 次`, '警報次數']}
-                    />
-                    <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Alert Type Distribution */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-warning" />
-                警報類型分佈
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={wsAlertStats} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis type="category" dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={80} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`${value} 次`, '次數']}
-                    />
-                    <Bar dataKey="count" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Site Alert Pie Chart */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-purple-500" />
-                工地警報佔比
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={sitePieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={70}
-                      paddingAngle={2}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      labelLine={false}
-                    >
-                      {sitePieData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number, _: string, props: any) => [
-                        `${value} 次警報`,
-                        props.payload.fullName
-                      ]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Site Alert Bar Chart - Full Width */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" />
-              各工地警報統計
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={siteAlertDistribution} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis 
-                    type="category" 
-                    dataKey="name" 
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
-                    width={120}
-                    tickFormatter={(value) => value.length > 12 ? value.substring(0, 12) + '...' : value}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number, name: string) => {
-                      const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
-                      return [`${value} 次`, labels[name] || name];
-                    }}
-                  />
-                  <Legend 
-                    formatter={(value) => {
-                      const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
-                      return labels[value] || value;
-                    }}
-                  />
-                  <Bar dataKey="error" stackId="a" fill="hsl(var(--destructive))" name="error" />
-                  <Bar dataKey="warning" stackId="a" fill="hsl(var(--warning))" name="warning" radius={[0, 4, 4, 0]} />
-                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
