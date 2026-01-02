@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
-  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert, Building2, MapPin, ChevronRight, Sun, Zap, Download
+  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert, Building2, MapPin, ChevronRight, Sun, Zap, Download, FileText
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,8 @@ import { Json } from '@/integrations/supabase/types';
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface SensorData {
   device_id: string;
@@ -427,6 +429,129 @@ const TrendAnalysisPage = () => {
     toast.success(`已匯出 ${filteredSensorData.length} 筆感測器數據和 ${filteredWsAlerts.length} 筆警報記錄`);
   }, [filteredSensorData, filteredWsAlerts]);
 
+  // PDF export state
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const chartsRef = useRef<HTMLDivElement>(null);
+
+  // PDF Export function
+  const exportToPDF = useCallback(async () => {
+    if (!chartsRef.current) {
+      toast.error('無法取得圖表內容');
+      return;
+    }
+
+    setIsExportingPDF(true);
+    toast.info('正在生成 PDF 報告，請稍候...');
+
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      let yOffset = margin;
+
+      // Title
+      pdf.setFontSize(20);
+      pdf.setTextColor(59, 130, 246);
+      pdf.text('趨勢分析報告', pageWidth / 2, yOffset, { align: 'center' });
+      yOffset += 10;
+
+      // Report info
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      const now = new Date();
+      pdf.text(`報告生成時間: ${now.toLocaleString('zh-TW')}`, margin, yOffset);
+      yOffset += 5;
+      pdf.text(`時間範圍: ${getTimeRangeLabel()}`, margin, yOffset);
+      yOffset += 5;
+      pdf.text(`選擇設備: ${selectedDeviceName}`, margin, yOffset);
+      yOffset += 10;
+
+      // Statistics Summary
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('統計摘要', margin, yOffset);
+      yOffset += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(60, 60, 60);
+
+      if (envStats) {
+        const statsData = [
+          ['指標', '平均值', '最小值', '最大值'],
+          ['溫度 (°C)', envStats.temperature?.avg?.toString() || '-', envStats.temperature?.min?.toString() || '-', envStats.temperature?.max?.toString() || '-'],
+          ['濕度 (%)', envStats.humidity?.avg?.toString() || '-', envStats.humidity?.min?.toString() || '-', envStats.humidity?.max?.toString() || '-'],
+          ['PM2.5 (µg/m³)', envStats.pm25?.avg?.toString() || '-', envStats.pm25?.min?.toString() || '-', envStats.pm25?.max?.toString() || '-'],
+          ['PM10 (µg/m³)', envStats.pm10?.avg?.toString() || '-', envStats.pm10?.min?.toString() || '-', envStats.pm10?.max?.toString() || '-'],
+          ['噪音 (dB)', envStats.noise?.avg?.toString() || '-', envStats.noise?.min?.toString() || '-', envStats.noise?.max?.toString() || '-'],
+        ];
+
+        statsData.forEach((row, index) => {
+          const cellWidth = (pageWidth - margin * 2) / 4;
+          row.forEach((cell, colIndex) => {
+            pdf.text(cell, margin + colIndex * cellWidth, yOffset);
+          });
+          yOffset += 6;
+        });
+        yOffset += 5;
+        pdf.text(`資料筆數: ${envStats.dataCount}`, margin, yOffset);
+        yOffset += 10;
+      }
+
+      // Alert Statistics
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('警報統計', margin, yOffset);
+      yOffset += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(60, 60, 60);
+      wsAlertStats.forEach(stat => {
+        pdf.text(`${stat.label}: ${stat.count} 次`, margin, yOffset);
+        yOffset += 5;
+      });
+      yOffset += 5;
+      pdf.text(`警報總數: ${filteredWsAlerts.length}`, margin, yOffset);
+      yOffset += 15;
+
+      // Capture charts
+      const canvas = await html2canvas(chartsRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // Check if need new page
+      if (yOffset + imgHeight > pageHeight - margin) {
+        pdf.addPage();
+        yOffset = margin;
+      }
+
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text('趨勢圖表', margin, yOffset);
+      yOffset += 8;
+
+      pdf.addImage(imgData, 'PNG', margin, yOffset, imgWidth, imgHeight);
+
+      // Save PDF
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      pdf.save(`趨勢分析報告_${timestamp}.pdf`);
+
+      toast.success('PDF 報告已成功匯出');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.error('PDF 匯出失敗，請稍後再試');
+    } finally {
+      setIsExportingPDF(false);
+    }
+  }, [envStats, wsAlertStats, filteredWsAlerts, selectedDeviceName, getTimeRangeLabel]);
+
   if (loading || filterLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -501,6 +626,16 @@ const TrendAnalysisPage = () => {
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">匯出 CSV</span>
           </Button>
+
+          <Button 
+            variant="outline" 
+            onClick={exportToPDF}
+            className="gap-2"
+            disabled={isExportingPDF}
+          >
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">{isExportingPDF ? '生成中...' : '匯出 PDF'}</span>
+          </Button>
         </div>
       </div>
 
@@ -536,6 +671,8 @@ const TrendAnalysisPage = () => {
         )}
       </div>
 
+      {/* Charts container for PDF export */}
+      <div ref={chartsRef}>
       {/* Environment Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/5 border-orange-500/20">
@@ -964,6 +1101,7 @@ const TrendAnalysisPage = () => {
           </CardContent>
         </Card>
       </div>
+      </div> {/* End of chartsRef container */}
     </div>
   );
 };
