@@ -536,68 +536,6 @@ const TrendAnalysisPage = () => {
         )}
       </div>
 
-      {/* Environment Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/5 border-orange-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Thermometer className="w-4 h-4 text-orange-500" />
-              <span className="text-sm text-muted-foreground">溫度</span>
-            </div>
-            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-              {envStats?.temperature?.avg ?? trendData[trendData.length - 1]?.temperature ?? '--'}°C
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-cyan-500/10 to-blue-500/5 border-cyan-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Droplets className="w-4 h-4 text-cyan-500" />
-              <span className="text-sm text-muted-foreground">濕度</span>
-            </div>
-            <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
-              {envStats?.humidity?.avg ?? trendData[trendData.length - 1]?.humidity ?? '--'}%
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border-blue-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Wind className="w-4 h-4 text-blue-500" />
-              <span className="text-sm text-muted-foreground">PM2.5</span>
-            </div>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {envStats?.pm25?.avg ?? trendData[trendData.length - 1]?.pm25 ?? '--'}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Wind className="w-4 h-4 text-green-500" />
-              <span className="text-sm text-muted-foreground">PM10</span>
-            </div>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {envStats?.pm10?.avg ?? trendData[trendData.length - 1]?.pm10 ?? '--'}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/5 border-purple-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Volume2 className="w-4 h-4 text-purple-500" />
-              <span className="text-sm text-muted-foreground">噪音</span>
-            </div>
-            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {envStats?.noise?.avg ?? trendData[trendData.length - 1]?.noise ?? '--'} dB
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* AI Detection Alert Section */}
       <div className="space-y-4">
