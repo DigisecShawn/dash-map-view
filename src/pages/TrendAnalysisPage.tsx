@@ -1,15 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
-  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert, Building2, MapPin, ChevronRight, Sun, Zap
+  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert, Building2, MapPin, ChevronRight, Sun, Zap, Download
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import { Json } from '@/integrations/supabase/types';
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
+import { toast } from 'sonner';
 
 interface SensorData {
   device_id: string;
@@ -370,6 +372,61 @@ const TrendAnalysisPage = () => {
   const isUsingMockData = filteredSensorData.length === 0;
   const isUsingMockAlerts = filteredWsAlerts.length === 0;
 
+  // CSV Export function
+  const exportToCSV = useCallback(() => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    
+    // Export sensor data
+    const sensorHeaders = ['設備ID', '記錄時間', '溫度(°C)', '濕度(%)', 'PM2.5(µg/m³)', 'PM10(µg/m³)', '噪音(dB)', '太陽能功率(W)'];
+    const sensorRows = filteredSensorData.map(d => [
+      d.device_id,
+      new Date(d.recorded_at).toLocaleString('zh-TW'),
+      d.temperature ?? '',
+      d.humidity ?? '',
+      d.pm25 ?? '',
+      d.pm10 ?? '',
+      d.noise ?? '',
+      d.solar_power ?? '',
+    ]);
+    
+    // Export alert data
+    const alertHeaders = ['警報ID', '警報類型', '訊息', '設備ID', '設備名稱', '嚴重程度', '已確認', '建立時間'];
+    const alertRows = filteredWsAlerts.map(a => [
+      a.id,
+      ALERT_TYPE_LABELS[a.alert_type] || a.alert_type,
+      a.message,
+      a.device_id ?? '',
+      a.device_name ?? '',
+      a.severity === 'error' ? '錯誤' : a.severity === 'warning' ? '警告' : a.severity,
+      a.acknowledged ? '是' : '否',
+      new Date(a.created_at).toLocaleString('zh-TW'),
+    ]);
+
+    // Combine into single CSV with sections
+    const csvContent = [
+      '=== 感測器數據 ===',
+      sensorHeaders.join(','),
+      ...sensorRows.map(row => row.map(cell => `"${cell}"`).join(',')),
+      '',
+      '=== 警報記錄 ===',
+      alertHeaders.join(','),
+      ...alertRows.map(row => row.map(cell => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    // Add BOM for Excel UTF-8 compatibility
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `趨勢分析報告_${timestamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+
+    toast.success(`已匯出 ${filteredSensorData.length} 筆感測器數據和 ${filteredWsAlerts.length} 筆警報記錄`);
+  }, [filteredSensorData, filteredWsAlerts]);
+
   if (loading || filterLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -434,6 +491,16 @@ const TrendAnalysisPage = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <Button 
+            variant="outline" 
+            onClick={exportToCSV}
+            className="gap-2"
+            disabled={isUsingMockData && isUsingMockAlerts}
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">匯出 CSV</span>
+          </Button>
         </div>
       </div>
 
