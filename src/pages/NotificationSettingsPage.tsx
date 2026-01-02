@@ -26,17 +26,41 @@ const NotificationSettingsPage = () => {
   const [openChannels, setOpenChannels] = useState<string[]>(['line']);
 
   const [lineConfig, setLineConfig] = useState({ 
-    channel_access_token: '', 
-    user_id: '',
+    channel_access_token: 'xXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx', 
+    user_id: 'U1234567890abcdef1234567890abcdef',
     custom_message: '⚠️ 警報通知\n設備：{device_name}\n訊息：{message}\n時間：{timestamp}',
-    include_screenshot: false,
+    include_screenshot: true,
   });
-  const [emailConfig, setEmailConfig] = useState({ api_key: '', from_email: '', to_email: '' });
-  const [smsConfig, setSmsConfig] = useState({ account_sid: '', auth_token: '', from_number: '', to_number: '' });
+  const [emailConfig, setEmailConfig] = useState({ 
+    api_key: 're_xxxxxxxxxxxxxxxxxxxxxxxxxxxx', 
+    from_email: 'alerts@iot-monitor.com', 
+    to_email: 'admin@company.com' 
+  });
+  const [smsConfig, setSmsConfig] = useState({ 
+    account_sid: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 
+    auth_token: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 
+    from_number: '+15551234567', 
+    to_number: '+886912345678' 
+  });
+  
+  // Mock initial channels data
+  const [mockInitialized, setMockInitialized] = useState(false);
 
   useEffect(() => {
     fetchSettings();
   }, []);
+  
+  // Initialize with mock data if no data from database
+  useEffect(() => {
+    if (!loading && channels.length === 0 && !mockInitialized) {
+      setChannels([
+        { id: 'mock-line', channel: 'line', enabled: true, config: {} },
+        { id: 'mock-email', channel: 'email', enabled: true, config: {} },
+        { id: 'mock-sms', channel: 'sms', enabled: false, config: {} },
+      ]);
+      setMockInitialized(true);
+    }
+  }, [loading, channels.length, mockInitialized]);
 
   const fetchSettings = async () => {
     try {
@@ -46,7 +70,7 @@ const NotificationSettingsPage = () => {
 
       if (error) throw error;
 
-      if (data) {
+      if (data && data.length > 0) {
         const mappedChannels = data.map(d => ({
           id: d.id,
           channel: d.channel,
@@ -60,25 +84,25 @@ const NotificationSettingsPage = () => {
           switch (channel.channel) {
             case 'line':
               setLineConfig({
-                channel_access_token: (config.channel_access_token as string) || '',
-                user_id: (config.user_id as string) || '',
+                channel_access_token: (config.channel_access_token as string) || 'xXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx',
+                user_id: (config.user_id as string) || 'U1234567890abcdef1234567890abcdef',
                 custom_message: (config.custom_message as string) || '⚠️ 警報通知\n設備：{device_name}\n訊息：{message}\n時間：{timestamp}',
-                include_screenshot: (config.include_screenshot as boolean) || false,
+                include_screenshot: (config.include_screenshot as boolean) || true,
               });
               break;
             case 'email':
               setEmailConfig({
-                api_key: (config.api_key as string) || '',
-                from_email: (config.from_email as string) || '',
-                to_email: (config.to_email as string) || '',
+                api_key: (config.api_key as string) || 're_xxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                from_email: (config.from_email as string) || 'alerts@iot-monitor.com',
+                to_email: (config.to_email as string) || 'admin@company.com',
               });
               break;
             case 'sms':
               setSmsConfig({
-                account_sid: (config.account_sid as string) || '',
-                auth_token: (config.auth_token as string) || '',
-                from_number: (config.from_number as string) || '',
-                to_number: (config.to_number as string) || '',
+                account_sid: (config.account_sid as string) || 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                auth_token: (config.auth_token as string) || 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                from_number: (config.from_number as string) || '+15551234567',
+                to_number: (config.to_number as string) || '+886912345678',
               });
               break;
           }
