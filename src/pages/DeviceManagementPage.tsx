@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Monitor, Bell, Trash2, Plus, Save, Edit2, X, Camera, Video, Cctv, Webcam, ScanEye, Eye, LucideIcon, Building2, Factory, ChevronRight, Search, Filter, MoreVertical, Settings, Signal, Battery, Wifi } from 'lucide-react';
+import { Monitor, Bell, Trash2, Plus, Save, Edit2, X, Camera, Video, Cctv, Webcam, ScanEye, Eye, LucideIcon, Building2, Factory, ChevronRight, Search, Filter, MoreVertical, Settings, Signal, Battery, Wifi, Thermometer, Droplets, Wind, Volume2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -74,6 +75,14 @@ const getCameraIcon = (iconType: string): LucideIcon => {
   return found ? found.Icon : Camera;
 };
 
+const METRIC_TYPES = [
+  { key: 'temperature', label: '溫度', unit: '°C', icon: Thermometer, color: 'text-orange-500', bgColor: 'bg-orange-500/20', defaultValue: 35 },
+  { key: 'humidity', label: '濕度', unit: '%', icon: Droplets, color: 'text-blue-500', bgColor: 'bg-blue-500/20', defaultValue: 80 },
+  { key: 'pm25', label: 'PM2.5', unit: 'µg/m³', icon: Wind, color: 'text-purple-500', bgColor: 'bg-purple-500/20', defaultValue: 75 },
+  { key: 'pm10', label: 'PM10', unit: 'µg/m³', icon: Wind, color: 'text-cyan-500', bgColor: 'bg-cyan-500/20', defaultValue: 150 },
+  { key: 'noise', label: '噪音', unit: 'dB', icon: Volume2, color: 'text-yellow-500', bgColor: 'bg-yellow-500/20', defaultValue: 85 },
+];
+
 const METRIC_LABELS: Record<string, { label: string; unit: string }> = {
   temperature: { label: '溫度', unit: '°C' },
   humidity: { label: '濕度', unit: '%' },
@@ -100,6 +109,8 @@ const DeviceManagementPage = () => {
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [editingCamera, setEditingCamera] = useState<DeviceCamera | null>(null);
   const [selectedDeviceForCamera, setSelectedDeviceForCamera] = useState<string>('');
+  const [thresholdFilter, setThresholdFilter] = useState<string>('all');
+  const [savingThresholds, setSavingThresholds] = useState<Set<string>>(new Set());
 
   const [newDevice, setNewDevice] = useState({
     company_id: '',
@@ -261,21 +272,105 @@ const DeviceManagementPage = () => {
     }
   };
 
-  const handleToggleThreshold = async (id: string, enabled: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('device_alarm_thresholds')
-        .update({ enabled })
-        .eq('id', id);
+  const handleToggleThreshold = async (deviceId: string, metricType: string, enabled: boolean) => {
+    const existingThreshold = thresholds.find(t => t.device_id === deviceId && t.metric_type === metricType);
+    const key = `${deviceId}-${metricType}`;
+    setSavingThresholds(prev => new Set(prev).add(key));
 
-      if (error) throw error;
-      
-      setThresholds(prev => prev.map(t => t.id === id ? { ...t, enabled } : t));
+    try {
+      if (existingThreshold) {
+        const { error } = await supabase
+          .from('device_alarm_thresholds')
+          .update({ enabled })
+          .eq('id', existingThreshold.id);
+
+        if (error) throw error;
+        setThresholds(prev => prev.map(t => t.id === existingThreshold.id ? { ...t, enabled } : t));
+      } else {
+        const metric = METRIC_TYPES.find(m => m.key === metricType);
+        const { data, error } = await supabase
+          .from('device_alarm_thresholds')
+          .insert({
+            device_id: deviceId,
+            metric_type: metricType,
+            threshold_value: metric?.defaultValue || 0,
+            enabled,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) setThresholds(prev => [...prev, data]);
+      }
       toast.success(enabled ? '已啟用警報' : '已停用警報');
     } catch (error) {
       console.error('Error toggling threshold:', error);
       toast.error('更新失敗');
+    } finally {
+      setSavingThresholds(prev => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     }
+  };
+
+  const handleUpdateThresholdValue = async (deviceId: string, metricType: string, value: number) => {
+    const existingThreshold = thresholds.find(t => t.device_id === deviceId && t.metric_type === metricType);
+    const key = `${deviceId}-${metricType}`;
+    setSavingThresholds(prev => new Set(prev).add(key));
+
+    try {
+      if (existingThreshold) {
+        const { error } = await supabase
+          .from('device_alarm_thresholds')
+          .update({ threshold_value: value })
+          .eq('id', existingThreshold.id);
+
+        if (error) throw error;
+        setThresholds(prev => prev.map(t => t.id === existingThreshold.id ? { ...t, threshold_value: value } : t));
+      } else {
+        const { data, error } = await supabase
+          .from('device_alarm_thresholds')
+          .insert({
+            device_id: deviceId,
+            metric_type: metricType,
+            threshold_value: value,
+            enabled: true,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) setThresholds(prev => [...prev, data]);
+      }
+      toast.success('閾值已更新');
+    } catch (error) {
+      console.error('Error updating threshold:', error);
+      toast.error('更新失敗');
+    } finally {
+      setSavingThresholds(prev => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
+
+  const getDeviceThresholds = (deviceId: string) => {
+    return METRIC_TYPES.map(metric => {
+      const threshold = thresholds.find(t => t.device_id === deviceId && t.metric_type === metric.key);
+      return {
+        ...metric,
+        threshold: threshold,
+        value: threshold?.threshold_value ?? metric.defaultValue,
+        enabled: threshold?.enabled ?? false,
+      };
+    });
+  };
+
+  const getEnabledThresholdCount = (deviceId: string) => {
+    return thresholds.filter(t => t.device_id === deviceId && t.enabled).length;
   };
 
   const filteredDevices = useMemo(() => {
@@ -534,40 +629,136 @@ const DeviceManagementPage = () => {
 
         {/* Thresholds Tab */}
         <TabsContent value="thresholds" className="space-y-4 mt-4">
-          <ScrollArea className="h-[calc(100vh-380px)]">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {thresholds.map(threshold => {
-                const device = devices.find(d => d.device_id === threshold.device_id);
-                const metric = METRIC_LABELS[threshold.metric_type] || { label: threshold.metric_type, unit: '' };
-                return (
-                  <Card key={threshold.id} className="group">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${threshold.enabled ? 'bg-warning/20' : 'bg-muted'}`}>
-                            <Bell className={`w-5 h-5 ${threshold.enabled ? 'text-warning' : 'text-muted-foreground'}`} />
+          {/* Filter */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Select value={thresholdFilter} onValueChange={setThresholdFilter}>
+              <SelectTrigger className="w-full sm:w-64">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="篩選設備" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部設備</SelectItem>
+                {devices.map(d => (
+                  <SelectItem key={d.device_id} value={d.device_id}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <AlertTriangle className="w-4 h-4" />
+              <span>共 {thresholds.filter(t => t.enabled).length} 個啟用中的警報閾值</span>
+            </div>
+          </div>
+
+          <ScrollArea className="h-[calc(100vh-430px)]">
+            <Accordion type="multiple" className="space-y-3">
+              {devices
+                .filter(d => thresholdFilter === 'all' || d.device_id === thresholdFilter)
+                .map(device => {
+                  const deviceThresholds = getDeviceThresholds(device.device_id);
+                  const enabledCount = getEnabledThresholdCount(device.device_id);
+                  
+                  return (
+                    <AccordionItem key={device.device_id} value={device.device_id} className="border rounded-lg bg-card px-4">
+                      <AccordionTrigger className="hover:no-underline py-4">
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className={`p-2 rounded-lg ${device.status === 'online' ? 'bg-success/20' : 'bg-muted'}`}>
+                            <Monitor className={`w-5 h-5 ${device.status === 'online' ? 'text-success' : 'text-muted-foreground'}`} />
                           </div>
-                          <div>
-                            <h3 className="font-semibold">{metric.label}</h3>
-                            <p className="text-xs text-muted-foreground">{device?.name || threshold.device_id}</p>
+                          <div className="text-left">
+                            <h3 className="font-semibold">{device.name}</h3>
+                            <p className="text-xs text-muted-foreground">{device.device_id}</p>
+                          </div>
+                          <div className="ml-auto flex items-center gap-2 mr-4">
+                            {enabledCount > 0 ? (
+                              <Badge variant="default" className="bg-warning text-warning-foreground">
+                                {enabledCount} 個警報啟用
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">未設定警報</Badge>
+                            )}
                           </div>
                         </div>
-                        <Switch
-                          checked={threshold.enabled}
-                          onCheckedChange={checked => handleToggleThreshold(threshold.id, checked)}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm text-muted-foreground">警報閾值:</span>
-                        <span className="text-lg font-bold text-primary">
-                          {threshold.threshold_value} {metric.unit}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-4">
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 pt-2">
+                          {deviceThresholds.map(metric => {
+                            const MetricIcon = metric.icon;
+                            const isSaving = savingThresholds.has(`${device.device_id}-${metric.key}`);
+                            
+                            return (
+                              <Card key={metric.key} className={`relative overflow-hidden transition-all ${metric.enabled ? 'border-warning/50 shadow-md' : 'border-border'}`}>
+                                <CardContent className="p-4 space-y-3">
+                                  {/* Header */}
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className={`p-1.5 rounded-md ${metric.bgColor}`}>
+                                        <MetricIcon className={`w-4 h-4 ${metric.color}`} />
+                                      </div>
+                                      <span className="font-medium text-sm">{metric.label}</span>
+                                    </div>
+                                    <Switch
+                                      checked={metric.enabled}
+                                      onCheckedChange={checked => handleToggleThreshold(device.device_id, metric.key, checked)}
+                                      disabled={isSaving}
+                                    />
+                                  </div>
+
+                                  {/* Value Input */}
+                                  <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground">閾值設定</Label>
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="number"
+                                        value={metric.value}
+                                        onChange={e => {
+                                          const newValue = parseFloat(e.target.value);
+                                          if (!isNaN(newValue)) {
+                                            setThresholds(prev => {
+                                              const existing = prev.find(t => t.device_id === device.device_id && t.metric_type === metric.key);
+                                              if (existing) {
+                                                return prev.map(t => t.id === existing.id ? { ...t, threshold_value: newValue } : t);
+                                              }
+                                              return prev;
+                                            });
+                                          }
+                                        }}
+                                        onBlur={e => {
+                                          const newValue = parseFloat(e.target.value);
+                                          if (!isNaN(newValue) && newValue !== metric.threshold?.threshold_value) {
+                                            handleUpdateThresholdValue(device.device_id, metric.key, newValue);
+                                          }
+                                        }}
+                                        className="h-9"
+                                        disabled={isSaving}
+                                      />
+                                      <span className="text-sm text-muted-foreground whitespace-nowrap">{metric.unit}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Status indicator */}
+                                  {metric.enabled && (
+                                    <div className="flex items-center gap-1.5 text-xs text-warning">
+                                      <Bell className="w-3 h-3" />
+                                      <span>警報已啟用</span>
+                                    </div>
+                                  )}
+
+                                  {/* Loading overlay */}
+                                  {isSaving && (
+                                    <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+                                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+            </Accordion>
           </ScrollArea>
         </TabsContent>
       </Tabs>
