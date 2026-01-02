@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Menu, Home } from 'lucide-react';
 import Map from '@/components/Map';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
 import { useAlarmMonitor } from '@/hooks/useAlarmMonitor';
 import { supabase } from '@/integrations/supabase/client';
 import cctvNeihu from '@/assets/cctv-neihu.jpg';
@@ -36,6 +36,7 @@ interface Device {
 }
 
 const MapPage = () => {
+  const navigate = useNavigate();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
@@ -195,6 +196,18 @@ const MapPage = () => {
           />
         )}
       </main>
+
+      {/* Back to main system button */}
+      <div className="absolute top-4 right-4 z-10">
+        <Button 
+          variant="secondary" 
+          onClick={() => navigate('/')}
+          className="shadow-lg gap-2"
+        >
+          <Home className="w-4 h-4" />
+          <span className="hidden sm:inline">返回主系統</span>
+        </Button>
+      </div>
 
       {/* Status bar */}
       <div className="absolute bottom-4 right-4 bg-card/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-border">
