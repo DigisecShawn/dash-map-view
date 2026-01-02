@@ -636,38 +636,64 @@ const TrendAnalysisPage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sitePieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {sitePieData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number, _: string, props: any) => [
-                      `${value} 次警報`,
-                      props.payload.fullName
-                    ]}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="flex flex-col lg:flex-row items-center gap-6">
+              {/* Pie Chart */}
+              <div className="h-72 w-full lg:w-1/2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={sitePieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="value"
+                      stroke="hsl(var(--background))"
+                      strokeWidth={2}
+                    >
+                      {sitePieData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value: number, _: string, props: any) => [
+                        `${value} 次警報`,
+                        props.payload.fullName
+                      ]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              
+              {/* Custom Legend */}
+              <div className="w-full lg:w-1/2 space-y-2">
+                <p className="text-sm font-medium text-muted-foreground mb-3">工地圖例</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {sitePieData.map((site, index) => (
+                    <div 
+                      key={site.name} 
+                      className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                    >
+                      <div 
+                        className="w-4 h-4 rounded-full shrink-0" 
+                        style={{ backgroundColor: SITE_COLORS[index % SITE_COLORS.length] }}
+                      />
+                      <span className="text-sm truncate flex-1" title={site.fullName}>
+                        {site.fullName}
+                      </span>
+                      <Badge variant="secondary" className="text-xs shrink-0">
+                        {site.value} 次
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
