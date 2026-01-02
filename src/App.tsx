@@ -8,6 +8,7 @@ import AppLayout from "@/components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import TrendAnalysisPage from "./pages/TrendAnalysisPage";
 import MapPage from "./pages/MapPage";
+import MapLoginPage from "./pages/MapLoginPage";
 import OrganizationManagementPage from "./pages/OrganizationManagementPage";
 import DeviceManagementPage from "./pages/DeviceManagementPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
@@ -25,6 +26,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/map-login" element={<MapLoginPage />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/trends" element={<TrendAnalysisPage />} />
