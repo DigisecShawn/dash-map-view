@@ -651,6 +651,8 @@ const TrendAnalysisPage = () => {
                       dataKey="value"
                       stroke="hsl(var(--background))"
                       strokeWidth={2}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
                     >
                       {sitePieData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />
