@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Bell, Mail, MessageSquare, Phone, Save, TestTube } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Phone, Save, TestTube, CheckCircle, XCircle, Settings, Shield, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,6 +21,7 @@ const NotificationSettingsPage = () => {
   const [channels, setChannels] = useState<NotificationChannel[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null);
 
   const [lineConfig, setLineConfig] = useState({ channel_access_token: '', user_id: '' });
   const [emailConfig, setEmailConfig] = useState({ api_key: '', from_email: '', to_email: '' });
@@ -136,8 +138,12 @@ const NotificationSettingsPage = () => {
     return channels.find(c => c.channel === channelType)?.enabled || false;
   };
 
+  const isChannelConfigured = (channelType: string) => {
+    return channels.find(c => c.channel === channelType) !== undefined;
+  };
+
   const handleTestNotification = async (channelType: string) => {
-    toast.info(`正在發送 ${channelType} 測試通知...`);
+    setTesting(channelType);
     try {
       const { error } = await supabase.functions.invoke('send-notification', {
         body: {
@@ -152,6 +158,8 @@ const NotificationSettingsPage = () => {
     } catch (error) {
       console.error('Error sending test:', error);
       toast.error('發送測試通知失敗');
+    } finally {
+      setTesting(null);
     }
   };
 
@@ -163,201 +171,325 @@ const NotificationSettingsPage = () => {
     );
   }
 
+  const channelStats = {
+    configured: [lineConfig.channel_access_token, emailConfig.api_key, smsConfig.account_sid].filter(Boolean).length,
+    enabled: channels.filter(c => c.enabled).length,
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">通知設定</h1>
-        <p className="text-muted-foreground">設定警報通知管道</p>
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">通知設定</h1>
+          <p className="text-sm text-muted-foreground">設定警報通知管道與接收人</p>
+        </div>
       </div>
 
-      <Tabs defaultValue="line" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="line" className="gap-2">
-            <MessageSquare className="w-4 h-4" />
-            LINE
-          </TabsTrigger>
-          <TabsTrigger value="email" className="gap-2">
-            <Mail className="w-4 h-4" />
-            Email
-          </TabsTrigger>
-          <TabsTrigger value="sms" className="gap-2">
-            <Phone className="w-4 h-4" />
-            SMS
-          </TabsTrigger>
-        </TabsList>
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-br from-primary/10 to-transparent border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/20">
+                <Settings className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{channelStats.configured}</p>
+                <p className="text-xs text-muted-foreground">已設定管道</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-success/10 to-transparent border-success/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-success/20">
+                <Zap className="w-5 h-5 text-success" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-success">{channelStats.enabled}</p>
+                <p className="text-xs text-muted-foreground">已啟用</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-accent/10 to-transparent border-accent/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-accent/20">
+                <Shield className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">3</p>
+                <p className="text-xs text-muted-foreground">可用管道</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* LINE Tab */}
-        <TabsContent value="line">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+      {/* Channel Cards */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* LINE */}
+        <Card className={`relative overflow-hidden transition-all ${isChannelEnabled('line') ? 'ring-2 ring-success/50' : ''}`}>
+          <div className={`absolute top-0 left-0 right-0 h-1 ${isChannelEnabled('line') ? 'bg-success' : 'bg-muted'}`} />
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-green-500/20">
+                  <MessageSquare className="w-5 h-5 text-green-500" />
+                </div>
                 <div>
                   <CardTitle className="text-lg">LINE 通知</CardTitle>
-                  <CardDescription>透過 LINE 發送即時警報</CardDescription>
+                  <CardDescription className="text-xs">即時推播通知</CardDescription>
                 </div>
-                <Switch
-                  checked={isChannelEnabled('line')}
-                  onCheckedChange={checked => handleToggle('line', checked)}
-                />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Channel Access Token</Label>
+              <div className="flex items-center gap-2">
+                {isChannelConfigured('line') ? (
+                  <Badge variant="outline" className="text-success border-success/30 bg-success/10">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    已設定
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    <XCircle className="w-3 h-3 mr-1" />
+                    未設定
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <span className="text-sm font-medium">啟用通知</span>
+              <Switch
+                checked={isChannelEnabled('line')}
+                onCheckedChange={checked => handleToggle('line', checked)}
+              />
+            </div>
+            
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Channel Access Token</Label>
                 <Input
                   type="password"
-                  placeholder="輸入 LINE Channel Access Token"
+                  placeholder="輸入 Token"
                   value={lineConfig.channel_access_token}
                   onChange={e => setLineConfig(prev => ({ ...prev, channel_access_token: e.target.value }))}
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>User ID</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs">User ID</Label>
                 <Input
-                  placeholder="輸入 LINE User ID"
+                  placeholder="輸入 User ID"
                   value={lineConfig.user_id}
                   onChange={e => setLineConfig(prev => ({ ...prev, user_id: e.target.value }))}
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={() => handleSave('line', lineConfig)} disabled={saving}>
-                  <Save className="w-4 h-4 mr-2" />
-                  儲存
-                </Button>
-                <Button variant="outline" onClick={() => handleTestNotification('line')}>
-                  <TestTube className="w-4 h-4 mr-2" />
-                  測試
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
 
-        {/* Email Tab */}
-        <TabsContent value="email">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <div className="flex gap-2 pt-2">
+              <Button size="sm" onClick={() => handleSave('line', lineConfig)} disabled={saving} className="flex-1">
+                <Save className="w-3.5 h-3.5 mr-1.5" />
+                儲存
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleTestNotification('line')} disabled={testing === 'line'}>
+                <TestTube className="w-3.5 h-3.5 mr-1.5" />
+                測試
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Email */}
+        <Card className={`relative overflow-hidden transition-all ${isChannelEnabled('email') ? 'ring-2 ring-success/50' : ''}`}>
+          <div className={`absolute top-0 left-0 right-0 h-1 ${isChannelEnabled('email') ? 'bg-success' : 'bg-muted'}`} />
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-500/20">
+                  <Mail className="w-5 h-5 text-blue-500" />
+                </div>
                 <div>
                   <CardTitle className="text-lg">Email 通知</CardTitle>
-                  <CardDescription>透過 Email 發送警報</CardDescription>
+                  <CardDescription className="text-xs">電子郵件通知</CardDescription>
                 </div>
-                <Switch
-                  checked={isChannelEnabled('email')}
-                  onCheckedChange={checked => handleToggle('email', checked)}
-                />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>API Key (Resend)</Label>
+              <div className="flex items-center gap-2">
+                {isChannelConfigured('email') ? (
+                  <Badge variant="outline" className="text-success border-success/30 bg-success/10">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    已設定
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    <XCircle className="w-3 h-3 mr-1" />
+                    未設定
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <span className="text-sm font-medium">啟用通知</span>
+              <Switch
+                checked={isChannelEnabled('email')}
+                onCheckedChange={checked => handleToggle('email', checked)}
+              />
+            </div>
+            
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">API Key (Resend)</Label>
                 <Input
                   type="password"
-                  placeholder="輸入 Resend API Key"
+                  placeholder="輸入 API Key"
                   value={emailConfig.api_key}
                   onChange={e => setEmailConfig(prev => ({ ...prev, api_key: e.target.value }))}
+                  className="h-9 text-sm"
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>寄件人 Email</Label>
-                  <Input
-                    type="email"
-                    placeholder="noreply@example.com"
-                    value={emailConfig.from_email}
-                    onChange={e => setEmailConfig(prev => ({ ...prev, from_email: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>收件人 Email</Label>
-                  <Input
-                    type="email"
-                    placeholder="admin@example.com"
-                    value={emailConfig.to_email}
-                    onChange={e => setEmailConfig(prev => ({ ...prev, to_email: e.target.value }))}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">寄件人 Email</Label>
+                <Input
+                  type="email"
+                  placeholder="noreply@example.com"
+                  value={emailConfig.from_email}
+                  onChange={e => setEmailConfig(prev => ({ ...prev, from_email: e.target.value }))}
+                  className="h-9 text-sm"
+                />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={() => handleSave('email', emailConfig)} disabled={saving}>
-                  <Save className="w-4 h-4 mr-2" />
-                  儲存
-                </Button>
-                <Button variant="outline" onClick={() => handleTestNotification('email')}>
-                  <TestTube className="w-4 h-4 mr-2" />
-                  測試
-                </Button>
+              <div className="space-y-1.5">
+                <Label className="text-xs">收件人 Email</Label>
+                <Input
+                  type="email"
+                  placeholder="admin@example.com"
+                  value={emailConfig.to_email}
+                  onChange={e => setEmailConfig(prev => ({ ...prev, to_email: e.target.value }))}
+                  className="h-9 text-sm"
+                />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
 
-        {/* SMS Tab */}
-        <TabsContent value="sms">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <div className="flex gap-2 pt-2">
+              <Button size="sm" onClick={() => handleSave('email', emailConfig)} disabled={saving} className="flex-1">
+                <Save className="w-3.5 h-3.5 mr-1.5" />
+                儲存
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleTestNotification('email')} disabled={testing === 'email'}>
+                <TestTube className="w-3.5 h-3.5 mr-1.5" />
+                測試
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* SMS */}
+        <Card className={`relative overflow-hidden transition-all ${isChannelEnabled('sms') ? 'ring-2 ring-success/50' : ''}`}>
+          <div className={`absolute top-0 left-0 right-0 h-1 ${isChannelEnabled('sms') ? 'bg-success' : 'bg-muted'}`} />
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-purple-500/20">
+                  <Phone className="w-5 h-5 text-purple-500" />
+                </div>
                 <div>
                   <CardTitle className="text-lg">SMS 通知</CardTitle>
-                  <CardDescription>透過簡訊發送警報 (Twilio)</CardDescription>
+                  <CardDescription className="text-xs">簡訊通知 (Twilio)</CardDescription>
                 </div>
-                <Switch
-                  checked={isChannelEnabled('sms')}
-                  onCheckedChange={checked => handleToggle('sms', checked)}
-                />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Account SID</Label>
+              <div className="flex items-center gap-2">
+                {isChannelConfigured('sms') ? (
+                  <Badge variant="outline" className="text-success border-success/30 bg-success/10">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    已設定
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    <XCircle className="w-3 h-3 mr-1" />
+                    未設定
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <span className="text-sm font-medium">啟用通知</span>
+              <Switch
+                checked={isChannelEnabled('sms')}
+                onCheckedChange={checked => handleToggle('sms', checked)}
+              />
+            </div>
+            
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="grid gap-3 grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Account SID</Label>
                   <Input
                     type="password"
-                    placeholder="Twilio Account SID"
+                    placeholder="SID"
                     value={smsConfig.account_sid}
                     onChange={e => setSmsConfig(prev => ({ ...prev, account_sid: e.target.value }))}
+                    className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Auth Token</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Auth Token</Label>
                   <Input
                     type="password"
-                    placeholder="Twilio Auth Token"
+                    placeholder="Token"
                     value={smsConfig.auth_token}
                     onChange={e => setSmsConfig(prev => ({ ...prev, auth_token: e.target.value }))}
+                    className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>發送號碼</Label>
+              </div>
+              <div className="grid gap-3 grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">發送號碼</Label>
                   <Input
-                    placeholder="+1234567890"
+                    placeholder="+1..."
                     value={smsConfig.from_number}
                     onChange={e => setSmsConfig(prev => ({ ...prev, from_number: e.target.value }))}
+                    className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>接收號碼</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">接收號碼</Label>
                   <Input
-                    placeholder="+0987654321"
+                    placeholder="+886..."
                     value={smsConfig.to_number}
                     onChange={e => setSmsConfig(prev => ({ ...prev, to_number: e.target.value }))}
+                    className="h-9 text-sm"
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={() => handleSave('sms', smsConfig)} disabled={saving}>
-                  <Save className="w-4 h-4 mr-2" />
-                  儲存
-                </Button>
-                <Button variant="outline" onClick={() => handleTestNotification('sms')}>
-                  <TestTube className="w-4 h-4 mr-2" />
-                  測試
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button size="sm" onClick={() => handleSave('sms', smsConfig)} disabled={saving} className="flex-1">
+                <Save className="w-3.5 h-3.5 mr-1.5" />
+                儲存
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleTestNotification('sms')} disabled={testing === 'sms'}>
+                <TestTube className="w-3.5 h-3.5 mr-1.5" />
+                測試
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
