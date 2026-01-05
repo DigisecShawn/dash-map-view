@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert, Building2, MapPin, ChevronRight, Sun, Zap, Download
-} from 'lucide-react';
+import { Thermometer, Droplets, Wind, Volume2, TrendingUp, BarChart3, Monitor, Clock, AlertTriangle, ShieldAlert, Building2, MapPin, ChevronRight, Sun, Zap, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,7 +10,6 @@ import { Json } from '@/integrations/supabase/types';
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 import { toast } from 'sonner';
-
 interface SensorData {
   device_id: string;
   temperature: number | null;
@@ -23,7 +20,6 @@ interface SensorData {
   solar_power: number | null;
   recorded_at: string;
 }
-
 interface Device {
   id: string;
   device_id: string;
@@ -32,7 +28,6 @@ interface Device {
   company_id: string | null;
   site_id: string | null;
 }
-
 interface WebSocketAlert {
   id: string;
   alert_type: string;
@@ -44,40 +39,52 @@ interface WebSocketAlert {
   created_at: string;
   metadata: Json | null;
 }
-
 const ALERT_TYPE_LABELS: Record<string, string> = {
   'no_helmet': '未戴安全帽',
   'no_vest': '未穿反光背心',
   'intrusion': '入侵偵測',
   'fire_smoke': '煙霧偵測',
-  'fall_detection': '跌倒偵測',
+  'fall_detection': '跌倒偵測'
 };
-
-const TIME_RANGES = [
-  { value: '6h', label: '6 小時', hours: 6 },
-  { value: '12h', label: '12 小時', hours: 12 },
-  { value: '24h', label: '24 小時', hours: 24 },
-  { value: '7d', label: '7 天', hours: 168 },
-];
+const TIME_RANGES = [{
+  value: '6h',
+  label: '6 小時',
+  hours: 6
+}, {
+  value: '12h',
+  label: '12 小時',
+  hours: 12
+}, {
+  value: '24h',
+  label: '24 小時',
+  hours: 24
+}, {
+  value: '7d',
+  label: '7 天',
+  hours: 168
+}];
 
 // Generate mock data for demonstration
 const generateMockTrendData = (timeRange: string) => {
   const is7Days = timeRange === '7d';
   const points = is7Days ? 7 : 12;
   const now = new Date();
-  
-  return Array.from({ length: points }, (_, i) => {
+  return Array.from({
+    length: points
+  }, (_, i) => {
     const date = new Date(now);
     if (is7Days) {
       date.setDate(date.getDate() - (points - 1 - i));
     } else {
       date.setHours(date.getHours() - (points - 1 - i) * 2);
     }
-    
-    const timeKey = is7Days 
-      ? date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
-      : date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-    
+    const timeKey = is7Days ? date.toLocaleDateString('zh-TW', {
+      month: 'numeric',
+      day: 'numeric'
+    }) : date.toLocaleTimeString('zh-TW', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
     return {
       time: timeKey,
       temperature: Math.round((25 + Math.sin(i * 0.5) * 5 + Math.random() * 2) * 10) / 10,
@@ -85,69 +92,118 @@ const generateMockTrendData = (timeRange: string) => {
       pm25: Math.round((35 + Math.sin(i * 0.4) * 20 + Math.random() * 10) * 10) / 10,
       pm10: Math.round((50 + Math.cos(i * 0.35) * 25 + Math.random() * 15) * 10) / 10,
       noise: Math.round((65 + Math.sin(i * 0.6) * 10 + Math.random() * 5) * 10) / 10,
-      solar: Math.round((3 + Math.sin(i * 0.4) * 2 + Math.random()) * 10) / 10,
+      solar: Math.round((3 + Math.sin(i * 0.4) * 2 + Math.random()) * 10) / 10
     };
   });
 };
-
 const generateMockAlertData = (timeRange: string) => {
   const is7Days = timeRange === '7d';
   const points = is7Days ? 7 : 8;
   const now = new Date();
-  
-  return Array.from({ length: points }, (_, i) => {
+  return Array.from({
+    length: points
+  }, (_, i) => {
     const date = new Date(now);
     if (is7Days) {
       date.setDate(date.getDate() - (points - 1 - i));
     } else {
       date.setHours(date.getHours() - (points - 1 - i) * 3);
     }
-    
-    const timeKey = is7Days 
-      ? date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
-      : date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-    
+    const timeKey = is7Days ? date.toLocaleDateString('zh-TW', {
+      month: 'numeric',
+      day: 'numeric'
+    }) : date.toLocaleTimeString('zh-TW', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
     return {
       time: timeKey,
-      count: Math.floor(Math.random() * 8) + 1,
+      count: Math.floor(Math.random() * 8) + 1
     };
   });
 };
-
 const SEVERITY_LABELS: Record<string, string> = {
   'warning': '警告',
   'error': '嚴重',
-  'critical': '緊急',
+  'critical': '緊急'
 };
-
 const SEVERITY_COLORS: Record<string, string> = {
-  'warning': '#facc15',      // 🟨 黃色 - 警告
-  'error': '#f97316',        // 🟧 橘色 - 嚴重
-  'critical': '#ef4444',     // 🟥 紅色 - 緊急
+  'warning': '#facc15',
+  // 🟨 黃色 - 警告
+  'error': '#f97316',
+  // 🟧 橘色 - 嚴重
+  'critical': '#ef4444' // 🟥 紅色 - 緊急
 };
-
-const generateMockAlertStats = () => [
-  { type: 'no_helmet', label: '未戴安全帽', count: 12 },
-  { type: 'no_vest', label: '未穿反光背心', count: 8 },
-  { type: 'intrusion', label: '入侵偵測', count: 3 },
-  { type: 'fire_smoke', label: '煙霧偵測', count: 1 },
-  { type: 'fall_detection', label: '跌倒偵測', count: 2 },
-];
-
-const generateMockSeverityStats = () => [
-  { severity: 'warning', label: '警告', count: 18 },
-  { severity: 'error', label: '嚴重', count: 7 },
-  { severity: 'critical', label: '危害', count: 3 },
-];
-
-const generateMockSiteDistribution = () => [
-  { id: '1', name: '內湖汙水處理廠', total: 15, warning: 8, error: 5, critical: 2 },
-  { id: '2', name: '松山捷運站工地', total: 12, warning: 7, error: 4, critical: 1 },
-  { id: '3', name: '板橋車站雙子星', total: 9, warning: 6, error: 2, critical: 1 },
-  { id: '4', name: '新莊土地重劃區', total: 6, warning: 4, error: 1, critical: 1 },
-  { id: '5', name: '新店道路拓寬', total: 4, warning: 2, error: 1, critical: 1 },
-];
-
+const generateMockAlertStats = () => [{
+  type: 'no_helmet',
+  label: '未戴安全帽',
+  count: 12
+}, {
+  type: 'no_vest',
+  label: '未穿反光背心',
+  count: 8
+}, {
+  type: 'intrusion',
+  label: '入侵偵測',
+  count: 3
+}, {
+  type: 'fire_smoke',
+  label: '煙霧偵測',
+  count: 1
+}, {
+  type: 'fall_detection',
+  label: '跌倒偵測',
+  count: 2
+}];
+const generateMockSeverityStats = () => [{
+  severity: 'warning',
+  label: '警告',
+  count: 18
+}, {
+  severity: 'error',
+  label: '嚴重',
+  count: 7
+}, {
+  severity: 'critical',
+  label: '危害',
+  count: 3
+}];
+const generateMockSiteDistribution = () => [{
+  id: '1',
+  name: '內湖汙水處理廠',
+  total: 15,
+  warning: 8,
+  error: 5,
+  critical: 2
+}, {
+  id: '2',
+  name: '松山捷運站工地',
+  total: 12,
+  warning: 7,
+  error: 4,
+  critical: 1
+}, {
+  id: '3',
+  name: '板橋車站雙子星',
+  total: 9,
+  warning: 6,
+  error: 2,
+  critical: 1
+}, {
+  id: '4',
+  name: '新莊土地重劃區',
+  total: 6,
+  warning: 4,
+  error: 1,
+  critical: 1
+}, {
+  id: '5',
+  name: '新店道路拓寬',
+  total: 4,
+  warning: 2,
+  error: 1,
+  critical: 1
+}];
 const TrendAnalysisPage = () => {
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -155,7 +211,6 @@ const TrendAnalysisPage = () => {
   const [selectedDevice, setSelectedDevice] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<string>('24h');
   const [loading, setLoading] = useState(true);
-
   const {
     companies,
     filteredSites,
@@ -165,41 +220,27 @@ const TrendAnalysisPage = () => {
     setSelectedSiteId,
     loading: filterLoading,
     getCompanyName,
-    getSiteName,
+    getSiteName
   } = useCompanySiteFilter();
-
   const getTimeRangeHours = () => {
     return TIME_RANGES.find(t => t.value === timeRange)?.hours || 24;
   };
-
   const getTimeRangeLabel = () => {
     return TIME_RANGES.find(t => t.value === timeRange)?.label || '24 小時';
   };
-
   useEffect(() => {
     fetchData();
   }, [timeRange]);
-
   const fetchData = async () => {
     setLoading(true);
     try {
       const hours = getTimeRangeHours();
       const startTime = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-      
-      const [sensorRes, devicesRes, wsAlertsRes] = await Promise.all([
-        supabase
-          .from('device_sensor_history')
-          .select('*')
-          .gte('recorded_at', startTime)
-          .order('recorded_at', { ascending: true }),
-        supabase.from('devices').select('id, device_id, name, location, company_id, site_id'),
-        supabase
-          .from('websocket_alerts')
-          .select('*')
-          .gte('created_at', startTime)
-          .order('created_at', { ascending: true }),
-      ]);
-
+      const [sensorRes, devicesRes, wsAlertsRes] = await Promise.all([supabase.from('device_sensor_history').select('*').gte('recorded_at', startTime).order('recorded_at', {
+        ascending: true
+      }), supabase.from('devices').select('id, device_id, name, location, company_id, site_id'), supabase.from('websocket_alerts').select('*').gte('created_at', startTime).order('created_at', {
+        ascending: true
+      })]);
       if (sensorRes.data) setSensorData(sensorRes.data);
       if (devicesRes.data) setDevices(devicesRes.data);
       if (wsAlertsRes.data) setWsAlerts(wsAlertsRes.data);
@@ -242,26 +283,23 @@ const TrendAnalysisPage = () => {
   // Environment statistics
   const envStats = useMemo(() => {
     if (filteredSensorData.length === 0) return null;
-    
     const temps = filteredSensorData.map(d => d.temperature).filter(v => v !== null) as number[];
     const humids = filteredSensorData.map(d => d.humidity).filter(v => v !== null) as number[];
     const pm25s = filteredSensorData.map(d => d.pm25).filter(v => v !== null) as number[];
     const pm10s = filteredSensorData.map(d => d.pm10).filter(v => v !== null) as number[];
     const noises = filteredSensorData.map(d => d.noise).filter(v => v !== null) as number[];
-
     const calcStats = (arr: number[]) => arr.length > 0 ? {
       avg: Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 10) / 10,
       min: Math.round(Math.min(...arr) * 10) / 10,
-      max: Math.round(Math.max(...arr) * 10) / 10,
+      max: Math.round(Math.max(...arr) * 10) / 10
     } : null;
-
     return {
       temperature: calcStats(temps),
       humidity: calcStats(humids),
       pm25: calcStats(pm25s),
       pm10: calcStats(pm10s),
       noise: calcStats(noises),
-      dataCount: filteredSensorData.length,
+      dataCount: filteredSensorData.length
     };
   }, [filteredSensorData]);
 
@@ -285,35 +323,46 @@ const TrendAnalysisPage = () => {
     return Object.entries(stats).map(([type, count]) => ({
       type,
       label: ALERT_TYPE_LABELS[type] || type,
-      count,
+      count
     }));
   }, [filteredWsAlerts]);
 
   // WebSocket alert trend data
   const wsAlertTrendData = useMemo(() => {
     if (filteredWsAlerts.length === 0) return generateMockAlertData(timeRange);
-    const grouped: { [key: string]: number } = {};
+    const grouped: {
+      [key: string]: number;
+    } = {};
     const is7Days = timeRange === '7d';
-    
     filteredWsAlerts.forEach(alert => {
       let timeKey: string;
       if (is7Days) {
-        timeKey = new Date(alert.created_at).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+        timeKey = new Date(alert.created_at).toLocaleDateString('zh-TW', {
+          month: 'numeric',
+          day: 'numeric'
+        });
       } else {
-        timeKey = new Date(alert.created_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+        timeKey = new Date(alert.created_at).toLocaleTimeString('zh-TW', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
       }
       grouped[timeKey] = (grouped[timeKey] || 0) + 1;
     });
-
-    return Object.entries(grouped)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([time, count]) => ({ time, count }));
+    return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([time, count]) => ({
+      time,
+      count
+    }));
   }, [filteredWsAlerts, timeRange]);
 
   // WebSocket alert severity statistics
   const wsSeverityStats = useMemo(() => {
     if (filteredWsAlerts.length === 0) return generateMockSeverityStats();
-    const stats: Record<string, number> = { warning: 0, error: 0, critical: 0 };
+    const stats: Record<string, number> = {
+      warning: 0,
+      error: 0,
+      critical: 0
+    };
     filteredWsAlerts.forEach(alert => {
       if (stats[alert.severity] !== undefined) {
         stats[alert.severity]++;
@@ -325,32 +374,40 @@ const TrendAnalysisPage = () => {
     return Object.entries(stats).map(([severity, count]) => ({
       severity,
       label: SEVERITY_LABELS[severity] || severity,
-      count,
+      count
     }));
   }, [filteredWsAlerts]);
 
   // Site alert distribution data
   const siteAlertDistribution = useMemo(() => {
     if (wsAlerts.length === 0) return generateMockSiteDistribution();
-    const siteStats: Record<string, { name: string; total: number; warning: number; error: number; critical: number }> = {};
-    
+    const siteStats: Record<string, {
+      name: string;
+      total: number;
+      warning: number;
+      error: number;
+      critical: number;
+    }> = {};
     wsAlerts.forEach(alert => {
       if (!alert.device_id) return;
       const device = devices.find(d => d.device_id === alert.device_id);
       const siteName = device?.name || alert.device_name || alert.device_id;
-      
       if (!siteStats[alert.device_id]) {
-        siteStats[alert.device_id] = { name: siteName, total: 0, warning: 0, error: 0, critical: 0 };
+        siteStats[alert.device_id] = {
+          name: siteName,
+          total: 0,
+          warning: 0,
+          error: 0,
+          critical: 0
+        };
       }
       siteStats[alert.device_id].total++;
-      if (alert.severity === 'warning') siteStats[alert.device_id].warning++;
-      else if (alert.severity === 'error') siteStats[alert.device_id].error++;
-      else if (alert.severity === 'critical') siteStats[alert.device_id].critical++;
+      if (alert.severity === 'warning') siteStats[alert.device_id].warning++;else if (alert.severity === 'error') siteStats[alert.device_id].error++;else if (alert.severity === 'critical') siteStats[alert.device_id].critical++;
     });
-
-    return Object.entries(siteStats)
-      .map(([id, stats]) => ({ id, ...stats }))
-      .sort((a, b) => b.total - a.total);
+    return Object.entries(siteStats).map(([id, stats]) => ({
+      id,
+      ...stats
+    })).sort((a, b) => b.total - a.total);
   }, [wsAlerts, devices]);
 
   // Site alert pie chart data
@@ -358,52 +415,52 @@ const TrendAnalysisPage = () => {
     return siteAlertDistribution.map(site => ({
       name: site.name.length > 10 ? site.name.substring(0, 10) + '...' : site.name,
       fullName: site.name,
-      value: site.total,
+      value: site.total
     }));
   }, [siteAlertDistribution]);
-
   const SITE_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1'];
 
   // Trend chart data with mock fallback
   const trendData = useMemo(() => {
     if (filteredSensorData.length === 0) return generateMockTrendData(timeRange);
-    
-    const grouped: { [key: string]: SensorData[] } = {};
+    const grouped: {
+      [key: string]: SensorData[];
+    } = {};
     const is7Days = timeRange === '7d';
-    
     filteredSensorData.forEach(d => {
       let timeKey: string;
       if (is7Days) {
-        timeKey = new Date(d.recorded_at).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+        timeKey = new Date(d.recorded_at).toLocaleDateString('zh-TW', {
+          month: 'numeric',
+          day: 'numeric'
+        });
       } else {
-        timeKey = new Date(d.recorded_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+        timeKey = new Date(d.recorded_at).toLocaleTimeString('zh-TW', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
       }
       if (!grouped[timeKey]) grouped[timeKey] = [];
       grouped[timeKey].push(d);
     });
-
     const maxPoints = is7Days ? 14 : 12;
-
-    return Object.entries(grouped)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-maxPoints)
-      .map(([time, records]) => {
-        const temps = records.map(r => r.temperature).filter(v => v !== null) as number[];
-        const pm25s = records.map(r => r.pm25).filter(v => v !== null) as number[];
-        const humids = records.map(r => r.humidity).filter(v => v !== null) as number[];
-        const pm10s = records.map(r => r.pm10).filter(v => v !== null) as number[];
-        const noises = records.map(r => r.noise).filter(v => v !== null) as number[];
-        const solars = records.map(r => r.solar_power).filter(v => v !== null) as number[];
-        return {
-          time,
-          temperature: temps.length > 0 ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length * 10) / 10 : null,
-          pm25: pm25s.length > 0 ? Math.round(pm25s.reduce((a, b) => a + b, 0) / pm25s.length * 10) / 10 : null,
-          humidity: humids.length > 0 ? Math.round(humids.reduce((a, b) => a + b, 0) / humids.length * 10) / 10 : null,
-          pm10: pm10s.length > 0 ? Math.round(pm10s.reduce((a, b) => a + b, 0) / pm10s.length * 10) / 10 : null,
-          noise: noises.length > 0 ? Math.round(noises.reduce((a, b) => a + b, 0) / noises.length * 10) / 10 : null,
-          solar: solars.length > 0 ? Math.round(solars.reduce((a, b) => a + b, 0) / solars.length * 10) / 10 : null,
-        };
-      });
+    return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).slice(-maxPoints).map(([time, records]) => {
+      const temps = records.map(r => r.temperature).filter(v => v !== null) as number[];
+      const pm25s = records.map(r => r.pm25).filter(v => v !== null) as number[];
+      const humids = records.map(r => r.humidity).filter(v => v !== null) as number[];
+      const pm10s = records.map(r => r.pm10).filter(v => v !== null) as number[];
+      const noises = records.map(r => r.noise).filter(v => v !== null) as number[];
+      const solars = records.map(r => r.solar_power).filter(v => v !== null) as number[];
+      return {
+        time,
+        temperature: temps.length > 0 ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length * 10) / 10 : null,
+        pm25: pm25s.length > 0 ? Math.round(pm25s.reduce((a, b) => a + b, 0) / pm25s.length * 10) / 10 : null,
+        humidity: humids.length > 0 ? Math.round(humids.reduce((a, b) => a + b, 0) / humids.length * 10) / 10 : null,
+        pm10: pm10s.length > 0 ? Math.round(pm10s.reduce((a, b) => a + b, 0) / pm10s.length * 10) / 10 : null,
+        noise: noises.length > 0 ? Math.round(noises.reduce((a, b) => a + b, 0) / noises.length * 10) / 10 : null,
+        solar: solars.length > 0 ? Math.round(solars.reduce((a, b) => a + b, 0) / solars.length * 10) / 10 : null
+      };
+    });
   }, [filteredSensorData, timeRange]);
 
   // Check if using mock data
@@ -413,47 +470,23 @@ const TrendAnalysisPage = () => {
   // CSV Export function
   const exportToCSV = useCallback(() => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    
+
     // Export sensor data
     const sensorHeaders = ['設備ID', '記錄時間', '溫度(°C)', '濕度(%)', 'PM2.5(µg/m³)', 'PM10(µg/m³)', '噪音(dB)', '太陽能功率(W)'];
-    const sensorRows = filteredSensorData.map(d => [
-      d.device_id,
-      new Date(d.recorded_at).toLocaleString('zh-TW'),
-      d.temperature ?? '',
-      d.humidity ?? '',
-      d.pm25 ?? '',
-      d.pm10 ?? '',
-      d.noise ?? '',
-      d.solar_power ?? '',
-    ]);
-    
+    const sensorRows = filteredSensorData.map(d => [d.device_id, new Date(d.recorded_at).toLocaleString('zh-TW'), d.temperature ?? '', d.humidity ?? '', d.pm25 ?? '', d.pm10 ?? '', d.noise ?? '', d.solar_power ?? '']);
+
     // Export alert data
     const alertHeaders = ['警報ID', '警報類型', '訊息', '設備ID', '設備名稱', '嚴重程度', '已確認', '建立時間'];
-    const alertRows = filteredWsAlerts.map(a => [
-      a.id,
-      ALERT_TYPE_LABELS[a.alert_type] || a.alert_type,
-      a.message,
-      a.device_id ?? '',
-      a.device_name ?? '',
-      SEVERITY_LABELS[a.severity] || a.severity,
-      a.acknowledged ? '是' : '否',
-      new Date(a.created_at).toLocaleString('zh-TW'),
-    ]);
+    const alertRows = filteredWsAlerts.map(a => [a.id, ALERT_TYPE_LABELS[a.alert_type] || a.alert_type, a.message, a.device_id ?? '', a.device_name ?? '', SEVERITY_LABELS[a.severity] || a.severity, a.acknowledged ? '是' : '否', new Date(a.created_at).toLocaleString('zh-TW')]);
 
     // Combine into single CSV with sections
-    const csvContent = [
-      '=== 感測器數據 ===',
-      sensorHeaders.join(','),
-      ...sensorRows.map(row => row.map(cell => `"${cell}"`).join(',')),
-      '',
-      '=== 警報記錄 ===',
-      alertHeaders.join(','),
-      ...alertRows.map(row => row.map(cell => `"${cell}"`).join(',')),
-    ].join('\n');
+    const csvContent = ['=== 感測器數據 ===', sensorHeaders.join(','), ...sensorRows.map(row => row.map(cell => `"${cell}"`).join(',')), '', '=== 警報記錄 ===', alertHeaders.join(','), ...alertRows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
 
     // Add BOM for Excel UTF-8 compatibility
     const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([BOM + csvContent], {
+      type: 'text/csv;charset=utf-8;'
+    });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `趨勢分析報告_${timestamp}.csv`;
@@ -461,20 +494,14 @@ const TrendAnalysisPage = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
-
     toast.success(`已匯出 ${filteredSensorData.length} 筆感測器數據和 ${filteredWsAlerts.length} 筆警報記錄`);
   }, [filteredSensorData, filteredWsAlerts]);
-
   if (loading || filterLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+    return <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="p-4 md:p-6 space-y-6">
+  return <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -487,15 +514,7 @@ const TrendAnalysisPage = () => {
         
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          <CompanySiteFilter
-            companies={companies}
-            filteredSites={filteredSites}
-            selectedCompanyId={selectedCompanyId}
-            selectedSiteId={selectedSiteId}
-            onCompanyChange={setSelectedCompanyId}
-            onSiteChange={setSelectedSiteId}
-            compact
-          />
+          <CompanySiteFilter companies={companies} filteredSites={filteredSites} selectedCompanyId={selectedCompanyId} selectedSiteId={selectedSiteId} onCompanyChange={setSelectedCompanyId} onSiteChange={setSelectedSiteId} compact />
           
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
@@ -504,11 +523,9 @@ const TrendAnalysisPage = () => {
                 <SelectValue placeholder="時間範圍" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border z-50">
-                {TIME_RANGES.map(range => (
-                  <SelectItem key={range.value} value={range.value}>
+                {TIME_RANGES.map(range => <SelectItem key={range.value} value={range.value}>
                     {range.label}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -521,21 +538,14 @@ const TrendAnalysisPage = () => {
               </SelectTrigger>
               <SelectContent className="bg-card border-border z-50">
                 <SelectItem value="all">全部設備</SelectItem>
-                {companyFilteredDevices.map(device => (
-                  <SelectItem key={device.device_id} value={device.device_id}>
+                {companyFilteredDevices.map(device => <SelectItem key={device.device_id} value={device.device_id}>
                     {device.name}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          <Button 
-            variant="outline" 
-            onClick={exportToCSV}
-            className="gap-2"
-            disabled={isUsingMockData && isUsingMockAlerts}
-          >
+          <Button variant="outline" onClick={exportToCSV} className="gap-2" disabled={isUsingMockData && isUsingMockAlerts}>
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">匯出 CSV</span>
           </Button>
@@ -544,34 +554,28 @@ const TrendAnalysisPage = () => {
 
       {/* Current Selection Badge */}
       <div className="flex items-center gap-2 flex-wrap">
-        {(selectedCompanyId !== 'all' || selectedSiteId !== 'all') && (
-          <>
+        {(selectedCompanyId !== 'all' || selectedSiteId !== 'all') && <>
             <Badge variant="outline" className="text-sm flex items-center gap-1">
               <Building2 className="w-3 h-3" />
               {selectedCompanyId === 'all' ? '全部公司' : getCompanyName(selectedCompanyId)}
             </Badge>
-            {selectedSiteId !== 'all' && (
-              <>
+            {selectedSiteId !== 'all' && <>
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 <Badge variant="outline" className="text-sm flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
                   {getSiteName(selectedSiteId)}
                 </Badge>
-              </>
-            )}
-          </>
-        )}
+              </>}
+          </>}
         <Badge variant="outline" className="text-sm">
           設備: {selectedDeviceName}
         </Badge>
         <Badge variant="secondary" className="text-sm">
           時間: {getTimeRangeLabel()}
         </Badge>
-        {(isUsingMockData || isUsingMockAlerts) && (
-          <Badge variant="outline" className="text-sm text-muted-foreground border-dashed">
+        {(isUsingMockData || isUsingMockAlerts) && <Badge variant="outline" className="text-sm text-muted-foreground border-dashed">
             展示模擬數據
-          </Badge>
-        )}
+          </Badge>}
       </div>
 
 
@@ -580,36 +584,27 @@ const TrendAnalysisPage = () => {
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <ShieldAlert className="w-5 h-5 text-destructive" />
           AI 偵測警報分析
-          {isUsingMockAlerts && (
-            <Badge variant="outline" className="text-xs text-muted-foreground border-dashed ml-2">
+          {isUsingMockAlerts && <Badge variant="outline" className="text-xs text-muted-foreground border-dashed ml-2">
               模擬數據
-            </Badge>
-          )}
+            </Badge>}
         </h2>
         
         {/* Severity Statistics */}
         <div className="grid grid-cols-3 gap-4 mb-4">
-          {wsSeverityStats.map(stat => (
-            <Card 
-              key={stat.severity} 
-              className="border-2"
-              style={{ 
-                borderColor: `${SEVERITY_COLORS[stat.severity]}40`,
-                background: `linear-gradient(135deg, ${SEVERITY_COLORS[stat.severity]}15, ${SEVERITY_COLORS[stat.severity]}05)`
-              }}
-            >
+          {wsSeverityStats.map(stat => <Card key={stat.severity} className="border-2" style={{
+          borderColor: `${SEVERITY_COLORS[stat.severity]}40`,
+          background: `linear-gradient(135deg, ${SEVERITY_COLORS[stat.severity]}15, ${SEVERITY_COLORS[stat.severity]}05)`
+        }}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: SEVERITY_COLORS[stat.severity] }}
-                  />
+                  <div className="w-3 h-3 rounded-full" style={{
+                backgroundColor: SEVERITY_COLORS[stat.severity]
+              }} />
                   <span className="text-sm font-medium">{stat.label}</span>
                 </div>
-                <div 
-                  className="text-3xl font-bold"
-                  style={{ color: SEVERITY_COLORS[stat.severity] }}
-                >
+                <div className="text-3xl font-bold" style={{
+              color: SEVERITY_COLORS[stat.severity]
+            }}>
                   {stat.count}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
@@ -618,23 +613,14 @@ const TrendAnalysisPage = () => {
                   {stat.severity === 'critical' && '緊急危險狀況'}
                 </div>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
 
         {/* Alert Type Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {wsAlertStats.map(stat => (
-            <Card key={stat.type} className="bg-gradient-to-br from-destructive/10 to-orange-500/5 border-destructive/20">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-4 h-4 text-destructive" />
-                  <span className="text-sm font-medium truncate">{stat.label}</span>
-                </div>
-                <div className="text-2xl font-bold text-destructive">{stat.count}</div>
-              </CardContent>
-            </Card>
-          ))}
+          {wsAlertStats.map(stat => <Card key={stat.type} className="bg-gradient-to-br from-destructive/10 to-orange-500/5 border-destructive/20">
+              
+            </Card>)}
         </div>
 
         {/* Alert Charts Grid */}
@@ -652,16 +638,19 @@ const TrendAnalysisPage = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={wsAlertTrendData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`${value} 次`, '警報次數']}
-                    />
+                    <XAxis dataKey="time" tick={{
+                    fontSize: 10,
+                    fill: 'hsl(var(--muted-foreground))'
+                  }} />
+                    <YAxis tick={{
+                    fontSize: 10,
+                    fill: 'hsl(var(--muted-foreground))'
+                  }} />
+                    <Tooltip contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }} formatter={(value: number) => [`${value} 次`, '警報次數']} />
                     <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -682,16 +671,19 @@ const TrendAnalysisPage = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={wsAlertStats} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis type="category" dataKey="label" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={80} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [`${value} 次`, '次數']}
-                    />
+                    <XAxis type="number" tick={{
+                    fontSize: 10,
+                    fill: 'hsl(var(--muted-foreground))'
+                  }} />
+                    <YAxis type="category" dataKey="label" tick={{
+                    fontSize: 10,
+                    fill: 'hsl(var(--muted-foreground))'
+                  }} width={80} />
+                    <Tooltip contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }} formatter={(value: number) => [`${value} 次`, '次數']} />
                     <Bar dataKey="count" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -714,34 +706,16 @@ const TrendAnalysisPage = () => {
               <div className="h-72 w-full lg:w-1/2">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie
-                      data={sitePieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="hsl(var(--background))"
-                      strokeWidth={2}
-                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                      labelLine={false}
-                    >
-                      {sitePieData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />
-                      ))}
+                    <Pie data={sitePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" stroke="hsl(var(--background))" strokeWidth={2} label={({
+                    percent
+                  }) => `${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                      {sitePieData.map((_, index) => <Cell key={`cell-${index}`} fill={SITE_COLORS[index % SITE_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number, _: string, props: any) => [
-                        `${value} 次警報`,
-                        props.payload.fullName
-                      ]}
-                    />
+                    <Tooltip contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }} formatter={(value: number, _: string, props: any) => [`${value} 次警報`, props.payload.fullName]} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -750,23 +724,17 @@ const TrendAnalysisPage = () => {
               <div className="w-full lg:w-1/2 space-y-2">
                 <p className="text-sm font-medium text-muted-foreground mb-3">工地圖例</p>
                 <div className="grid grid-cols-1 gap-2">
-                  {sitePieData.map((site, index) => (
-                    <div 
-                      key={site.name} 
-                      className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                    >
-                      <div 
-                        className="w-4 h-4 rounded-full shrink-0" 
-                        style={{ backgroundColor: SITE_COLORS[index % SITE_COLORS.length] }}
-                      />
+                  {sitePieData.map((site, index) => <div key={site.name} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="w-4 h-4 rounded-full shrink-0" style={{
+                    backgroundColor: SITE_COLORS[index % SITE_COLORS.length]
+                  }} />
                       <span className="text-sm truncate flex-1" title={site.fullName}>
                         {site.fullName}
                       </span>
                       <Badge variant="secondary" className="text-xs shrink-0">
                         {site.value} 次
                       </Badge>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </div>
             </div>
@@ -786,27 +754,22 @@ const TrendAnalysisPage = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={siteAlertDistribution} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis 
-                    type="category" 
-                    dataKey="name" 
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
-                    width={120}
-                    tickFormatter={(value) => value.length > 12 ? value.substring(0, 12) + '...' : value}
-                  />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number, name: string) => {
-                        return [`${value} 次`, SEVERITY_LABELS[name] || name];
-                      }}
-                    />
-                    <Legend 
-                      formatter={(value) => SEVERITY_LABELS[value] || value}
-                    />
+                  <XAxis type="number" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                  <YAxis type="category" dataKey="name" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} width={120} tickFormatter={value => value.length > 12 ? value.substring(0, 12) + '...' : value} />
+                    <Tooltip contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px'
+                }} formatter={(value: number, name: string) => {
+                  return [`${value} 次`, SEVERITY_LABELS[name] || name];
+                }} />
+                    <Legend formatter={value => SEVERITY_LABELS[value] || value} />
                     <Bar dataKey="critical" stackId="a" fill={SEVERITY_COLORS.critical} name="critical" />
                     <Bar dataKey="error" stackId="a" fill={SEVERITY_COLORS.error} name="error" />
                     <Bar dataKey="warning" stackId="a" fill={SEVERITY_COLORS.warning} name="warning" radius={[0, 4, 4, 0]} />
@@ -843,30 +806,36 @@ const TrendAnalysisPage = () => {
                 <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="humidGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis yAxisId="temp" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="°C" orientation="left" />
-                  <YAxis yAxisId="humid" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="%" orientation="right" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number, name: string) => {
-                      if (name === 'temperature') return [`${value}°C`, '溫度'];
-                      if (name === 'humidity') return [`${value}%`, '濕度'];
-                      return [value, name];
-                    }}
-                  />
+                  <XAxis dataKey="time" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                  <YAxis yAxisId="temp" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} unit="°C" orientation="left" />
+                  <YAxis yAxisId="humid" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} unit="%" orientation="right" />
+                  <Tooltip contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px'
+                }} formatter={(value: number, name: string) => {
+                  if (name === 'temperature') return [`${value}°C`, '溫度'];
+                  if (name === 'humidity') return [`${value}%`, '濕度'];
+                  return [value, name];
+                }} />
                   <Area yAxisId="temp" type="monotone" dataKey="temperature" stroke="#f97316" fill="url(#tempGradient)" strokeWidth={2} name="temperature" />
                   <Area yAxisId="humid" type="monotone" dataKey="humidity" stroke="#06b6d4" fill="url(#humidGradient)" strokeWidth={2} name="humidity" />
                 </AreaChart>
@@ -899,28 +868,34 @@ const TrendAnalysisPage = () => {
                 <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="pm25Gradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="pm10Gradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="μg/m³" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number, name: string) => {
-                      const labels: Record<string, string> = { pm25: 'PM2.5', pm10: 'PM10' };
-                      return [`${value} μg/m³`, labels[name] || name];
-                    }}
-                  />
+                  <XAxis dataKey="time" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                  <YAxis tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} unit="μg/m³" />
+                  <Tooltip contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px'
+                }} formatter={(value: number, name: string) => {
+                  const labels: Record<string, string> = {
+                    pm25: 'PM2.5',
+                    pm10: 'PM10'
+                  };
+                  return [`${value} μg/m³`, labels[name] || name];
+                }} />
                   <Area type="monotone" dataKey="pm25" stroke="#3b82f6" fill="url(#pm25Gradient)" strokeWidth={2} name="pm25" />
                   <Area type="monotone" dataKey="pm10" stroke="#22c55e" fill="url(#pm10Gradient)" strokeWidth={2} name="pm10" />
                 </AreaChart>
@@ -943,21 +918,24 @@ const TrendAnalysisPage = () => {
                 <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="noiseGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="dB" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number) => [`${value} dB`, '噪音']}
-                  />
+                  <XAxis dataKey="time" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                  <YAxis tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} unit="dB" />
+                  <Tooltip contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px'
+                }} formatter={(value: number) => [`${value} dB`, '噪音']} />
                   <Area type="monotone" dataKey="noise" stroke="#a855f7" fill="url(#noiseGradient)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -979,21 +957,24 @@ const TrendAnalysisPage = () => {
                 <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#eab308" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#eab308" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#eab308" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#eab308" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit=" kW" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number) => [`${value} kW`, '發電量']}
-                  />
+                  <XAxis dataKey="time" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                  <YAxis tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} unit=" kW" />
+                  <Tooltip contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px'
+                }} formatter={(value: number) => [`${value} kW`, '發電量']} />
                   <Area type="monotone" dataKey="solar" stroke="#eab308" fill="url(#solarGradient)" strokeWidth={2} name="solar" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -1001,8 +982,6 @@ const TrendAnalysisPage = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default TrendAnalysisPage;
