@@ -789,15 +789,15 @@ const TrendAnalysisPage = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <Thermometer className="w-4 h-4 text-orange-500" />
+              <Thermometer className="w-4 h-4 text-red-500" />
               溫溼度趨勢
               <div className="ml-auto flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-0.5 bg-orange-500 rounded" />
+                  <div className="w-3 h-0.5 bg-red-500 rounded" />
                   <span className="text-muted-foreground">溫度</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-0.5 bg-cyan-500 rounded" />
+                  <div className="w-3 h-0.5 bg-sky-500 rounded" />
                   <span className="text-muted-foreground">濕度</span>
                 </div>
               </div>
@@ -809,12 +809,12 @@ const TrendAnalysisPage = () => {
                 <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="humidGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -839,8 +839,8 @@ const TrendAnalysisPage = () => {
                   if (name === 'humidity') return [`${value}%`, '濕度'];
                   return [value, name];
                 }} />
-                  <Area yAxisId="temp" type="monotone" dataKey="temperature" stroke="#f97316" fill="url(#tempGradient)" strokeWidth={2} name="temperature" />
-                  <Area yAxisId="humid" type="monotone" dataKey="humidity" stroke="#06b6d4" fill="url(#humidGradient)" strokeWidth={2} name="humidity" />
+                  <Area yAxisId="temp" type="monotone" dataKey="temperature" stroke="#ef4444" fill="url(#tempGradient)" strokeWidth={2} name="temperature" />
+                  <Area yAxisId="humid" type="monotone" dataKey="humidity" stroke="#0ea5e9" fill="url(#humidGradient)" strokeWidth={2} name="humidity" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -851,15 +851,15 @@ const TrendAnalysisPage = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <Wind className="w-4 h-4 text-blue-500" />
+              <Wind className="w-4 h-4 text-violet-500" />
               空氣品質趨勢
               <div className="ml-auto flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-0.5 bg-blue-500 rounded" />
+                  <div className="w-3 h-0.5 bg-violet-500 rounded" />
                   <span className="text-muted-foreground">PM2.5</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-0.5 bg-green-500 rounded" />
+                  <div className="w-3 h-0.5 bg-amber-600 rounded" />
                   <span className="text-muted-foreground">PM10</span>
                 </div>
               </div>
@@ -871,12 +871,12 @@ const TrendAnalysisPage = () => {
                 <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="pm25Gradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="pm10Gradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#d97706" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#d97706" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -899,8 +899,8 @@ const TrendAnalysisPage = () => {
                   };
                   return [`${value} μg/m³`, labels[name] || name];
                 }} />
-                  <Area type="monotone" dataKey="pm25" stroke="#3b82f6" fill="url(#pm25Gradient)" strokeWidth={2} name="pm25" />
-                  <Area type="monotone" dataKey="pm10" stroke="#22c55e" fill="url(#pm10Gradient)" strokeWidth={2} name="pm10" />
+                  <Area type="monotone" dataKey="pm25" stroke="#8b5cf6" fill="url(#pm25Gradient)" strokeWidth={2} name="pm25" />
+                  <Area type="monotone" dataKey="pm10" stroke="#d97706" fill="url(#pm10Gradient)" strokeWidth={2} name="pm10" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -911,7 +911,7 @@ const TrendAnalysisPage = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-purple-500" />
+              <Volume2 className="w-4 h-4 text-slate-500" />
               噪音趨勢
             </CardTitle>
           </CardHeader>
@@ -921,8 +921,8 @@ const TrendAnalysisPage = () => {
                 <AreaChart data={trendData}>
                   <defs>
                     <linearGradient id="noiseGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#64748b" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#64748b" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -939,7 +939,7 @@ const TrendAnalysisPage = () => {
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '8px'
                 }} formatter={(value: number) => [`${value} dB`, '噪音']} />
-                  <Area type="monotone" dataKey="noise" stroke="#a855f7" fill="url(#noiseGradient)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="noise" stroke="#64748b" fill="url(#noiseGradient)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
