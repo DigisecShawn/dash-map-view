@@ -40,7 +40,7 @@ interface WebSocketAlert {
 const ALERT_TYPE_LABELS: Record<string, string> = {
   'no_helmet': '未戴安全帽',
   'no_vest': '未穿反光背心',
-  'intrusion': '入侵偵測',
+  'intrusion': '火焰偵測',
   'fire_smoke': '煙霧偵測',
   'fall_detection': '跌倒偵測',
 };
