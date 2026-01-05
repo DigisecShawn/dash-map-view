@@ -1,12 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
-import { Monitor, Search, Bell, Menu, Settings, BarChart3, AlertTriangle, History, LayoutDashboard, MapPin } from 'lucide-react';
-import Map from '@/components/Map';
+import { Monitor, Search, Bell, Menu, Settings, BarChart3, History, LayoutDashboard, MapPin } from 'lucide-react';
 import DeviceCard from '@/components/DeviceCard';
-import DeviceDetails from '@/components/DeviceDetails';
-import NotificationSettings from '@/components/NotificationSettings';
-import DeviceManagement from '@/components/DeviceManagement';
-import TrendChartsMenu from '@/components/TrendChartsMenu';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -19,6 +14,13 @@ import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
 import cctvXindian from '@/assets/cctv-xindian.jpg';
 import cctvSongshan from '@/assets/cctv-songshan.jpg';
+
+// Lazy load heavy components
+const Map = lazy(() => import('@/components/Map'));
+const DeviceDetails = lazy(() => import('@/components/DeviceDetails'));
+const NotificationSettings = lazy(() => import('@/components/NotificationSettings'));
+const DeviceManagement = lazy(() => import('@/components/DeviceManagement'));
+const TrendChartsMenu = lazy(() => import('@/components/TrendChartsMenu'));
 
 const cctvImages: Record<string, string> = {
   'DEV-001': cctvNeihu,
@@ -39,6 +41,13 @@ interface Device {
   location: string;
   cctvImage: string;
 }
+
+// Loading fallback for components
+const ComponentLoader = () => (
+  <div className="flex items-center justify-center h-full w-full">
+    <div className="animate-pulse text-muted-foreground">載入中...</div>
+  </div>
+);
 
 const Index = () => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -285,39 +294,49 @@ const Index = () => {
 
         <main className="flex-1 relative">
           <div className="h-full p-2 sm:p-4">
-            <Map
-              devices={devices}
-              selectedDevice={selectedDevice}
-              onDeviceSelect={handleDeviceSelect}
-              onDeviceClick={handleDeviceClick}
-              onDeviceDoubleClick={handleDeviceDoubleClick}
-              apiKey={apiKey}
-            />
+            <Suspense fallback={<ComponentLoader />}>
+              <Map
+                devices={devices}
+                selectedDevice={selectedDevice}
+                onDeviceSelect={handleDeviceSelect}
+                onDeviceClick={handleDeviceClick}
+                onDeviceDoubleClick={handleDeviceDoubleClick}
+                apiKey={apiKey}
+              />
+            </Suspense>
           </div>
 
           {showDetails && (
-            <DeviceDetails
-              device={selectedDeviceData}
-              onClose={() => setShowDetails(false)}
-            />
+            <Suspense fallback={<ComponentLoader />}>
+              <DeviceDetails
+                device={selectedDeviceData}
+                onClose={() => setShowDetails(false)}
+              />
+            </Suspense>
           )}
 
           {showNotificationSettings && (
-            <NotificationSettings
-              onClose={() => setShowNotificationSettings(false)}
-            />
+            <Suspense fallback={<ComponentLoader />}>
+              <NotificationSettings
+                onClose={() => setShowNotificationSettings(false)}
+              />
+            </Suspense>
           )}
 
           {showDeviceManagement && (
-            <DeviceManagement
-              onClose={() => setShowDeviceManagement(false)}
-            />
+            <Suspense fallback={<ComponentLoader />}>
+              <DeviceManagement
+                onClose={() => setShowDeviceManagement(false)}
+              />
+            </Suspense>
           )}
 
           {showTrendCharts && (
-            <TrendChartsMenu
-              onClose={() => setShowTrendCharts(false)}
-            />
+            <Suspense fallback={<ComponentLoader />}>
+              <TrendChartsMenu
+                onClose={() => setShowTrendCharts(false)}
+              />
+            </Suspense>
           )}
         </main>
       </div>
