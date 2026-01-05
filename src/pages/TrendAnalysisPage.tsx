@@ -121,9 +121,9 @@ const SEVERITY_LABELS: Record<string, string> = {
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
-  'warning': '#f59e0b',      // 橘色 - 警告
-  'error': '#dc2626',        // 紅色 - 嚴重
-  'critical': '#7f1d1d',     // 深紅 - 危害
+  'warning': '#fca5a5',      // 淺紅 - 警告
+  'error': '#ef4444',        // 中紅 - 嚴重
+  'critical': '#dc2626',     // 亮紅 - 危害
 };
 
 const generateMockAlertStats = () => [
