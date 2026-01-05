@@ -7,33 +7,25 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
 const AuthPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!username.trim() || !password.trim()) {
       toast.error('請填寫帳號和密碼');
       return;
     }
-
     setLoading(true);
     try {
       // Query accounts table to verify credentials
-      const { data: account, error } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('username', username.trim())
-        .eq('password_hash', password)
-        .eq('is_active', true)
-        .single();
-
+      const {
+        data: account,
+        error
+      } = await supabase.from('accounts').select('*').eq('username', username.trim()).eq('password_hash', password).eq('is_active', true).single();
       if (error || !account) {
         toast.error('帳號或密碼錯誤');
         setLoading(false);
@@ -46,11 +38,9 @@ const AuthPage = () => {
         username: account.username,
         display_name: account.display_name,
         role: account.role,
-        logged_in_at: new Date().toISOString(),
+        logged_in_at: new Date().toISOString()
       };
-      
       localStorage.setItem('auth_session', JSON.stringify(sessionData));
-      
       toast.success(`歡迎回來，${account.display_name || account.username}！`);
       navigate('/');
     } catch (error) {
@@ -60,17 +50,15 @@ const AuthPage = () => {
       setLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow mb-4">
             <BarChart3 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">監控系統</h1>
-          <p className="text-muted-foreground mt-1">設備監控與管理平台</p>
+          <h1 className="text-2xl font-bold">DGS-MAP  GPS</h1>
+          <p className="text-muted-foreground mt-1">設備監控管理平台</p>
         </div>
 
         <Card className="border-border/50 shadow-xl">
@@ -84,16 +72,7 @@ const AuthPage = () => {
                 <Label htmlFor="username">帳號</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="請輸入帳號"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10"
-                    disabled={loading}
-                    autoComplete="username"
-                  />
+                  <Input id="username" type="text" placeholder="請輸入帳號" value={username} onChange={e => setUsername(e.target.value)} className="pl-10" disabled={loading} autoComplete="username" />
                 </div>
               </div>
 
@@ -101,21 +80,8 @@ const AuthPage = () => {
                 <Label htmlFor="password">密碼</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="請輸入密碼"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    disabled={loading}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
+                  <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="請輸入密碼" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10" disabled={loading} autoComplete="current-password" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -139,8 +105,6 @@ const AuthPage = () => {
           © {new Date().getFullYear()} 監控系統. All rights reserved.
         </p>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default AuthPage;
