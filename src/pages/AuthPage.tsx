@@ -50,7 +50,7 @@ const AuthPage = () => {
       setLoading(false);
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
+  return <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
@@ -110,6 +110,6 @@ const AuthPage = () => {
           © {new Date().getFullYear()} 監控系統. All rights reserved.
         </p>
       </div>
-    </div>;
+    </main>;
 };
 export default AuthPage;
