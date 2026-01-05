@@ -618,7 +618,12 @@ const TrendAnalysisPage = () => {
 
         {/* Alert Type Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {wsAlertStats.map(stat => {})}
+          {wsAlertStats.map(stat => (
+            <Card key={stat.type} className="p-4">
+              <div className="text-sm font-medium text-muted-foreground">{stat.label}</div>
+              <div className="mt-2 text-2xl font-bold">{stat.count}</div>
+            </Card>
+          ))}
         </div>
 
         {/* Alert Charts Grid */}
@@ -690,6 +695,44 @@ const TrendAnalysisPage = () => {
           </Card>
         </div>
 
+        {/* Site Alert Bar Chart - Full Width */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              各工地警報統計
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={siteAlertDistribution} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} />
+                  <YAxis type="category" dataKey="name" tick={{
+                  fontSize: 10,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} width={120} tickFormatter={value => value.length > 12 ? value.substring(0, 12) + '...' : value} />
+                    <Tooltip contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px'
+                }} formatter={(value: number, name: string) => {
+                  return [`${value} 次`, SEVERITY_LABELS[name] || name];
+                }} />
+                    <Legend formatter={value => SEVERITY_LABELS[value] || value} />
+                    <Bar dataKey="critical" stackId="a" fill={SEVERITY_COLORS.critical} name="critical" />
+                    <Bar dataKey="error" stackId="a" fill={SEVERITY_COLORS.error} name="error" />
+                    <Bar dataKey="warning" stackId="a" fill={SEVERITY_COLORS.warning} name="warning" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Site Alert Pie Chart - Standalone */}
         <Card>
           <CardHeader className="pb-2">
@@ -735,44 +778,6 @@ const TrendAnalysisPage = () => {
                     </div>)}
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Site Alert Bar Chart - Full Width */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" />
-              各工地警報統計
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={siteAlertDistribution} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" tick={{
-                  fontSize: 10,
-                  fill: 'hsl(var(--muted-foreground))'
-                }} />
-                  <YAxis type="category" dataKey="name" tick={{
-                  fontSize: 10,
-                  fill: 'hsl(var(--muted-foreground))'
-                }} width={120} tickFormatter={value => value.length > 12 ? value.substring(0, 12) + '...' : value} />
-                    <Tooltip contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px'
-                }} formatter={(value: number, name: string) => {
-                  return [`${value} 次`, SEVERITY_LABELS[name] || name];
-                }} />
-                    <Legend formatter={value => SEVERITY_LABELS[value] || value} />
-                    <Bar dataKey="critical" stackId="a" fill={SEVERITY_COLORS.critical} name="critical" />
-                    <Bar dataKey="error" stackId="a" fill={SEVERITY_COLORS.error} name="error" />
-                    <Bar dataKey="warning" stackId="a" fill={SEVERITY_COLORS.warning} name="warning" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
