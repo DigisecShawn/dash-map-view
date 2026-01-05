@@ -144,7 +144,7 @@ const generateMockAlertStats = () => [{
   count: 8
 }, {
   type: 'intrusion',
-  label: '入侵偵測',
+  label: '火焰偵測',
   count: 3
 }, {
   type: 'fire_smoke',
