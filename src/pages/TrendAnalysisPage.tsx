@@ -114,6 +114,18 @@ const generateMockAlertData = (timeRange: string) => {
   });
 };
 
+const SEVERITY_LABELS: Record<string, string> = {
+  'warning': '警告',
+  'error': '嚴重',
+  'critical': '危害',
+};
+
+const SEVERITY_COLORS: Record<string, string> = {
+  'warning': '#f59e0b',      // amber/yellow
+  'error': '#ef4444',        // red
+  'critical': '#7c3aed',     // purple
+};
+
 const generateMockAlertStats = () => [
   { type: 'no_helmet', label: '未戴安全帽', count: 12 },
   { type: 'no_vest', label: '未穿反光背心', count: 8 },
@@ -122,12 +134,18 @@ const generateMockAlertStats = () => [
   { type: 'fall_detection', label: '跌倒偵測', count: 2 },
 ];
 
+const generateMockSeverityStats = () => [
+  { severity: 'warning', label: '警告', count: 18 },
+  { severity: 'error', label: '嚴重', count: 7 },
+  { severity: 'critical', label: '危害', count: 3 },
+];
+
 const generateMockSiteDistribution = () => [
-  { id: '1', name: '內湖汙水處理廠', total: 15, error: 5, warning: 10 },
-  { id: '2', name: '松山捷運站工地', total: 12, error: 4, warning: 8 },
-  { id: '3', name: '板橋車站雙子星', total: 9, error: 2, warning: 7 },
-  { id: '4', name: '新莊土地重劃區', total: 6, error: 1, warning: 5 },
-  { id: '5', name: '新店道路拓寬', total: 4, error: 1, warning: 3 },
+  { id: '1', name: '內湖汙水處理廠', total: 15, warning: 8, error: 5, critical: 2 },
+  { id: '2', name: '松山捷運站工地', total: 12, warning: 7, error: 4, critical: 1 },
+  { id: '3', name: '板橋車站雙子星', total: 9, warning: 6, error: 2, critical: 1 },
+  { id: '4', name: '新莊土地重劃區', total: 6, warning: 4, error: 1, critical: 1 },
+  { id: '5', name: '新店道路拓寬', total: 4, warning: 2, error: 1, critical: 1 },
 ];
 
 const TrendAnalysisPage = () => {
@@ -292,10 +310,29 @@ const TrendAnalysisPage = () => {
       .map(([time, count]) => ({ time, count }));
   }, [filteredWsAlerts, timeRange]);
 
+  // WebSocket alert severity statistics
+  const wsSeverityStats = useMemo(() => {
+    if (filteredWsAlerts.length === 0) return generateMockSeverityStats();
+    const stats: Record<string, number> = { warning: 0, error: 0, critical: 0 };
+    filteredWsAlerts.forEach(alert => {
+      if (stats[alert.severity] !== undefined) {
+        stats[alert.severity]++;
+      } else {
+        // Map unknown severities to warning
+        stats['warning']++;
+      }
+    });
+    return Object.entries(stats).map(([severity, count]) => ({
+      severity,
+      label: SEVERITY_LABELS[severity] || severity,
+      count,
+    }));
+  }, [filteredWsAlerts]);
+
   // Site alert distribution data
   const siteAlertDistribution = useMemo(() => {
     if (wsAlerts.length === 0) return generateMockSiteDistribution();
-    const siteStats: Record<string, { name: string; total: number; error: number; warning: number }> = {};
+    const siteStats: Record<string, { name: string; total: number; warning: number; error: number; critical: number }> = {};
     
     wsAlerts.forEach(alert => {
       if (!alert.device_id) return;
@@ -303,11 +340,12 @@ const TrendAnalysisPage = () => {
       const siteName = device?.name || alert.device_name || alert.device_id;
       
       if (!siteStats[alert.device_id]) {
-        siteStats[alert.device_id] = { name: siteName, total: 0, error: 0, warning: 0 };
+        siteStats[alert.device_id] = { name: siteName, total: 0, warning: 0, error: 0, critical: 0 };
       }
       siteStats[alert.device_id].total++;
-      if (alert.severity === 'error') siteStats[alert.device_id].error++;
       if (alert.severity === 'warning') siteStats[alert.device_id].warning++;
+      else if (alert.severity === 'error') siteStats[alert.device_id].error++;
+      else if (alert.severity === 'critical') siteStats[alert.device_id].critical++;
     });
 
     return Object.entries(siteStats)
@@ -397,7 +435,7 @@ const TrendAnalysisPage = () => {
       a.message,
       a.device_id ?? '',
       a.device_name ?? '',
-      a.severity === 'error' ? '錯誤' : a.severity === 'warning' ? '警告' : a.severity,
+      SEVERITY_LABELS[a.severity] || a.severity,
       a.acknowledged ? '是' : '否',
       new Date(a.created_at).toLocaleString('zh-TW'),
     ]);
@@ -549,7 +587,42 @@ const TrendAnalysisPage = () => {
           )}
         </h2>
         
-        {/* Alert Statistics */}
+        {/* Severity Statistics */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          {wsSeverityStats.map(stat => (
+            <Card 
+              key={stat.severity} 
+              className="border-2"
+              style={{ 
+                borderColor: `${SEVERITY_COLORS[stat.severity]}40`,
+                background: `linear-gradient(135deg, ${SEVERITY_COLORS[stat.severity]}15, ${SEVERITY_COLORS[stat.severity]}05)`
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: SEVERITY_COLORS[stat.severity] }}
+                  />
+                  <span className="text-sm font-medium">{stat.label}</span>
+                </div>
+                <div 
+                  className="text-3xl font-bold"
+                  style={{ color: SEVERITY_COLORS[stat.severity] }}
+                >
+                  {stat.count}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {stat.severity === 'warning' && '需要注意的潛在問題'}
+                  {stat.severity === 'error' && '需要立即處理'}
+                  {stat.severity === 'critical' && '緊急危險狀況'}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Alert Type Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {wsAlertStats.map(stat => (
             <Card key={stat.type} className="bg-gradient-to-br from-destructive/10 to-orange-500/5 border-destructive/20">
@@ -721,25 +794,22 @@ const TrendAnalysisPage = () => {
                     width={120}
                     tickFormatter={(value) => value.length > 12 ? value.substring(0, 12) + '...' : value}
                   />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number, name: string) => {
-                      const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
-                      return [`${value} 次`, labels[name] || name];
-                    }}
-                  />
-                  <Legend 
-                    formatter={(value) => {
-                      const labels: Record<string, string> = { error: '嚴重', warning: '警告' };
-                      return labels[value] || value;
-                    }}
-                  />
-                  <Bar dataKey="error" stackId="a" fill="hsl(var(--destructive))" name="error" />
-                  <Bar dataKey="warning" stackId="a" fill="hsl(var(--warning))" name="warning" radius={[0, 4, 4, 0]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(value: number, name: string) => {
+                        return [`${value} 次`, SEVERITY_LABELS[name] || name];
+                      }}
+                    />
+                    <Legend 
+                      formatter={(value) => SEVERITY_LABELS[value] || value}
+                    />
+                    <Bar dataKey="critical" stackId="a" fill={SEVERITY_COLORS.critical} name="critical" />
+                    <Bar dataKey="error" stackId="a" fill={SEVERITY_COLORS.error} name="error" />
+                    <Bar dataKey="warning" stackId="a" fill={SEVERITY_COLORS.warning} name="warning" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
