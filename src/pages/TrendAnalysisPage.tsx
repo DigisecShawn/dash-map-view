@@ -632,7 +632,7 @@ const TrendAnalysisPage = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-destructive" />
+                <TrendingUp className="w-4 h-4 text-cyan-500" />
                 警報趨勢
               </CardTitle>
             </CardHeader>
@@ -654,7 +654,7 @@ const TrendAnalysisPage = () => {
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px'
                   }} formatter={(value: number) => [`${value} 次`, '警報次數']} />
-                    <Bar dataKey="count" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="count" fill="hsl(185, 85%, 45%)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -665,7 +665,7 @@ const TrendAnalysisPage = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-warning" />
+                <AlertTriangle className="w-4 h-4 text-violet-500" />
                 警報類型分佈
               </CardTitle>
             </CardHeader>
@@ -687,7 +687,7 @@ const TrendAnalysisPage = () => {
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px'
                   }} formatter={(value: number) => [`${value} 次`, '次數']} />
-                    <Bar dataKey="count" fill="hsl(var(--warning))" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="count" fill="hsl(270, 70%, 55%)" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
