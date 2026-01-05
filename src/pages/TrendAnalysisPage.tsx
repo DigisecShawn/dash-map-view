@@ -117,13 +117,13 @@ const generateMockAlertData = (timeRange: string) => {
 const SEVERITY_LABELS: Record<string, string> = {
   'warning': '警告',
   'error': '嚴重',
-  'critical': '危害',
+  'critical': '緊急',
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
-  'warning': '#fca5a5',      // 淺紅 - 警告
-  'error': '#ef4444',        // 中紅 - 嚴重
-  'critical': '#dc2626',     // 亮紅 - 危害
+  'warning': '#facc15',      // 🟨 黃色 - 警告
+  'error': '#f97316',        // 🟧 橘色 - 嚴重
+  'critical': '#ef4444',     // 🟥 紅色 - 緊急
 };
 
 const generateMockAlertStats = () => [
