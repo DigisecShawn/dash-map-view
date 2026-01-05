@@ -14,6 +14,8 @@ import DeviceManagementPage from "./pages/DeviceManagementPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import AlarmHistory from "./pages/AlarmHistory";
 import WebSocketSettings from "./pages/WebSocketSettings";
+import AuthPage from "./pages/AuthPage";
+import UserManagementPage from "./pages/UserManagementPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Standalone pages without navigation */}
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/map-login" element={<MapLoginPage />} />
             <Route path="/map" element={<MapPage />} />
             
@@ -39,6 +42,7 @@ const App = () => (
               <Route path="/notifications" element={<NotificationSettingsPage />} />
               <Route path="/alarm-history" element={<AlarmHistory />} />
               <Route path="/websocket" element={<WebSocketSettings />} />
+              <Route path="/users" element={<UserManagementPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
