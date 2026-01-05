@@ -63,8 +63,11 @@ const AppLayout = () => {
   const filteredNavItems = navItems.filter(item => !item.adminOnly || isAdmin);
 
   const getUserInitials = () => {
-    if (user?.email) {
-      return user.email.substring(0, 2).toUpperCase();
+    if (user?.display_name) {
+      return user.display_name.substring(0, 2).toUpperCase();
+    }
+    if (user?.username) {
+      return user.username.substring(0, 2).toUpperCase();
     }
     return 'U';
   };
@@ -159,13 +162,13 @@ const AppLayout = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-medium truncate">{user?.email}</p>
+                    <p className="text-sm font-medium truncate">{user?.display_name || user?.username}</p>
                     <p className="text-xs text-muted-foreground capitalize">{role || 'viewer'}</p>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>我的帳號</DropdownMenuLabel>
+                <DropdownMenuLabel>{user?.display_name || user?.username}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
@@ -185,7 +188,7 @@ const AppLayout = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
+                <DropdownMenuLabel>{user?.display_name || user?.username}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />
@@ -233,7 +236,7 @@ const AppLayout = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
+                <DropdownMenuLabel>{user?.display_name || user?.username}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                   <LogOut className="w-4 h-4 mr-2" />

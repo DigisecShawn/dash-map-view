@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          is_active: boolean
+          password_hash: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          password_hash: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          password_hash?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       cameras: {
         Row: {
           created_at: string
