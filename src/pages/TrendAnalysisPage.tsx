@@ -618,9 +618,7 @@ const TrendAnalysisPage = () => {
 
         {/* Alert Type Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {wsAlertStats.map(stat => <Card key={stat.type} className="bg-gradient-to-br from-destructive/10 to-orange-500/5 border-destructive/20">
-              
-            </Card>)}
+          {wsAlertStats.map(stat => {})}
         </div>
 
         {/* Alert Charts Grid */}
