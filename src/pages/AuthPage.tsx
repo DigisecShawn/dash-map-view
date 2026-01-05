@@ -4,7 +4,7 @@ import { Eye, EyeOff, Lock, User, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 const AuthPage = () => {
@@ -63,7 +63,7 @@ const AuthPage = () => {
 
         <Card className="border-border/50 shadow-xl">
           <CardHeader className="text-center pb-2">
-            <CardTitle>系統登入</CardTitle>
+            <h2 className="text-2xl font-semibold leading-none tracking-tight">系統登入</h2>
             <CardDescription>請輸入您的帳號密碼</CardDescription>
           </CardHeader>
           <CardContent>
@@ -81,7 +81,12 @@ const AuthPage = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="請輸入密碼" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10" disabled={loading} autoComplete="current-password" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground w-6 h-6 flex items-center justify-center"
+                    aria-label={showPassword ? '隱藏密碼' : '顯示密碼'}
+                  >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>

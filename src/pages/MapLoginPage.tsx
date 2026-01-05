@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,7 +57,7 @@ const MapLoginPage = () => {
 
         <Card className="border-border/50 shadow-xl">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl text-center">登入</CardTitle>
+            <h2 className="text-xl text-center font-semibold leading-none tracking-tight">登入</h2>
             <CardDescription className="text-center">
               輸入您的帳號密碼以存取電子地圖
             </CardDescription>
@@ -96,7 +96,8 @@ const MapLoginPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors w-6 h-6 flex items-center justify-center"
+                    aria-label={showPassword ? '隱藏密碼' : '顯示密碼'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
