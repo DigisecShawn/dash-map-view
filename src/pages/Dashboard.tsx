@@ -262,7 +262,7 @@ const Dashboard = () => {
     const labels: { [key: string]: string } = {
       helmet_detection: '安全帽偵測',
       no_helmet: '未戴安全帽',
-      intrusion: '入侵偵測',
+      intrusion: '火焰偵測',
       fire_detection: '火災偵測',
       smoke_detection: '煙霧偵測',
       fall_detection: '跌倒偵測',
