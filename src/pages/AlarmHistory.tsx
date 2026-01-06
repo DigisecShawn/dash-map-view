@@ -124,10 +124,13 @@ const AlarmHistory = () => {
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
+      case 'emergency':
+        return <Badge variant="destructive" className="animate-pulse">緊急</Badge>;
+      case 'critical':
       case 'error':
-        return <Badge variant="destructive">嚴重</Badge>;
+        return <Badge className="bg-orange-500 text-white">嚴重</Badge>;
       case 'warning':
-        return <Badge className="bg-warning/20 text-warning border-0">警告</Badge>;
+        return <Badge className="bg-yellow-500 text-black">警告</Badge>;
       default:
         return <Badge variant="outline">{severity}</Badge>;
     }
