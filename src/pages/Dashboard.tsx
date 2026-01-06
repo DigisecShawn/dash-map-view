@@ -618,7 +618,9 @@ const Dashboard = () => {
                     </td>
                     <td className="py-2 text-muted-foreground">{device.location || '--'}</td>
                     <td className="py-2 text-center">
-                      <Badge variant={device.status === 'online' ? 'default' : 'secondary'} className="text-xs">
+                      <Badge 
+                        className={`text-xs ${device.status === 'online' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-gray-400 hover:bg-gray-500 text-white'}`}
+                      >
                         {device.status === 'online' ? '上線' : '離線'}
                       </Badge>
                     </td>
