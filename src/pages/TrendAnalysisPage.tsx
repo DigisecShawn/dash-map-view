@@ -10,6 +10,8 @@ import { Json } from '@/integrations/supabase/types';
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 import { toast } from 'sonner';
+import { ALERT_TYPE_CONFIG, getAlertTypeLabel } from '@/lib/alertTypeIcons';
+
 interface SensorData {
   device_id: string;
   temperature: number | null;
@@ -39,13 +41,6 @@ interface WebSocketAlert {
   created_at: string;
   metadata: Json | null;
 }
-const ALERT_TYPE_LABELS: Record<string, string> = {
-  'no_helmet': '未戴安全帽',
-  'no_vest': '未穿反光背心',
-  'intrusion': '火焰偵測',
-  'fire_smoke': '煙霧偵測',
-  'fall_detection': '跌倒偵測'
-};
 const TIME_RANGES = [{
   value: '6h',
   label: '6 小時',
@@ -322,7 +317,7 @@ const TrendAnalysisPage = () => {
     });
     return Object.entries(stats).map(([type, count]) => ({
       type,
-      label: ALERT_TYPE_LABELS[type] || type,
+      label: getAlertTypeLabel(type),
       count
     }));
   }, [filteredWsAlerts]);
@@ -477,7 +472,7 @@ const TrendAnalysisPage = () => {
 
     // Export alert data
     const alertHeaders = ['警報ID', '警報類型', '訊息', '設備ID', '設備名稱', '嚴重程度', '已確認', '建立時間'];
-    const alertRows = filteredWsAlerts.map(a => [a.id, ALERT_TYPE_LABELS[a.alert_type] || a.alert_type, a.message, a.device_id ?? '', a.device_name ?? '', SEVERITY_LABELS[a.severity] || a.severity, a.acknowledged ? '是' : '否', new Date(a.created_at).toLocaleString('zh-TW')]);
+    const alertRows = filteredWsAlerts.map(a => [a.id, getAlertTypeLabel(a.alert_type), a.message, a.device_id ?? '', a.device_name ?? '', SEVERITY_LABELS[a.severity] || a.severity, a.acknowledged ? '是' : '否', new Date(a.created_at).toLocaleString('zh-TW')]);
 
     // Combine into single CSV with sections
     const csvContent = ['=== 感測器數據 ===', sensorHeaders.join(','), ...sensorRows.map(row => row.map(cell => `"${cell}"`).join(',')), '', '=== 警報記錄 ===', alertHeaders.join(','), ...alertRows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
