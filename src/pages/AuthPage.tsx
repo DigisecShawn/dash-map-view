@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
 const AuthPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
@@ -50,14 +52,16 @@ const AuthPage = () => {
       setLoading(false);
     }
   };
-  return <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
+
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow mb-4">
             <BarChart3 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">DGS-MAP  GPS</h1>
+          <h1 className="text-2xl font-bold">DGS-MAP GPS</h1>
           <p className="text-muted-foreground mt-1">設備監控管理平台</p>
         </div>
 
@@ -107,9 +111,11 @@ const AuthPage = () => {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          © {new Date().getFullYear()} 監控系統. All rights reserved.
+          © {new Date().getFullYear()} DGS-MAP GPS. All rights reserved.
         </p>
       </div>
-    </main>;
+    </main>
+  );
 };
+
 export default AuthPage;
