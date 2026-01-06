@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getStatusBadgeClass, getStatusIconClass, getStatusLabel, type DeviceStatus } from '@/lib/statusUtils';
 
 interface Company {
   id: string;
@@ -862,9 +863,9 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 min-w-0">
                               {device.status === 'online' ? (
-                                <Wifi className="w-4 h-4 text-success shrink-0" />
+                                <Wifi className={`w-4 h-4 ${getStatusIconClass('online')} shrink-0`} />
                               ) : (
-                                <WifiOff className="w-4 h-4 text-muted-foreground shrink-0" />
+                                <WifiOff className={`w-4 h-4 ${getStatusIconClass('offline')} shrink-0`} />
                               )}
                               <div className="min-w-0">
                                 <div className="font-medium text-sm truncate">{device.name}</div>
@@ -872,8 +873,8 @@ const DeviceManagement = ({ onClose }: DeviceManagementProps) => {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge variant={device.status === 'online' ? 'default' : 'secondary'}>
-                                {device.status === 'online' ? '在線' : '離線'}
+                              <Badge className={getStatusBadgeClass(device.status as DeviceStatus)}>
+                                {getStatusLabel(device.status as DeviceStatus, true)}
                               </Badge>
                               <Button
                                 variant="ghost"

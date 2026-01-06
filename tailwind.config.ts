@@ -58,6 +58,16 @@ export default {
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
         info: "hsl(var(--info))",
+        status: {
+          online: {
+            DEFAULT: "hsl(var(--status-online))",
+            foreground: "hsl(var(--status-online-foreground))",
+          },
+          offline: {
+            DEFAULT: "hsl(var(--status-offline))",
+            foreground: "hsl(var(--status-offline-foreground))",
+          },
+        },
       },
       backgroundImage: {
         'gradient-primary': 'var(--gradient-primary)',

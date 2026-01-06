@@ -1,6 +1,6 @@
 import { Battery, Signal, Monitor } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-
+import { getStatusDotClass, getStatusLabel, type DeviceStatus } from '@/lib/statusUtils';
 interface DeviceCardProps {
   id: string;
   name: string;
@@ -40,10 +40,8 @@ const DeviceCard = ({ name, battery, signal, status, isSelected, onClick }: Devi
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">{name}</h3>
           <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
-            <div className={`w-2 h-2 rounded-full ${
-              status === 'online' ? 'bg-success animate-pulse' : 'bg-muted-foreground'
-            }`} />
-            <span className="text-[10px] sm:text-xs text-muted-foreground capitalize">{status}</span>
+            <div className={`w-2 h-2 rounded-full ${getStatusDotClass(status as DeviceStatus)}`} />
+            <span className="text-[10px] sm:text-xs text-muted-foreground">{getStatusLabel(status as DeviceStatus)}</span>
           </div>
         </div>
       </div>

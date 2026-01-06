@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import DeviceTrendChart from './DeviceTrendChart';
+import { getStatusDotClass, getStatusLabel, type DeviceStatus } from '@/lib/statusUtils';
 
 interface Device {
   id: string;
@@ -49,10 +50,8 @@ const DeviceDetails = ({ device, onClose }: DeviceDetailsProps) => {
               <div className="min-w-0">
                 <h2 className="text-base sm:text-xl font-bold text-foreground truncate">{device.name}</h2>
                 <div className="flex items-center gap-2 mt-1">
-                  <div className={`w-2 h-2 rounded-full ${
-                    device.status === 'online' ? 'bg-success animate-pulse' : 'bg-muted-foreground'
-                  }`} />
-                  <span className="text-xs sm:text-sm text-muted-foreground capitalize">{device.status}</span>
+                  <div className={`w-2 h-2 rounded-full ${getStatusDotClass(device.status as DeviceStatus)}`} />
+                  <span className="text-xs sm:text-sm text-muted-foreground">{getStatusLabel(device.status as DeviceStatus)}</span>
                 </div>
               </div>
             </div>
