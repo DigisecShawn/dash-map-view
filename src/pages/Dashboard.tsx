@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Monitor, Wifi, WifiOff, AlertTriangle, Activity, Radio, HardHat, Building2, MapPin, ChevronRight, Sun, Zap
+  Monitor, Wifi, WifiOff, AlertTriangle, Building2, MapPin, ChevronRight, Sun
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
+import { getAlertTypeIcon, getAlertTypeLabel } from '@/lib/alertTypeIcons';
 
 interface Device {
   id: string;
@@ -248,28 +249,7 @@ const Dashboard = () => {
     return units[metric] || '';
   };
 
-  const getAlertTypeIcon = (alertType: string) => {
-    switch (alertType) {
-      case 'helmet_detection':
-      case 'no_helmet':
-        return <HardHat className="w-4 h-4" />;
-      default:
-        return <Radio className="w-4 h-4" />;
-    }
-  };
-
-  const getAlertTypeLabel = (alertType: string) => {
-    const labels: { [key: string]: string } = {
-      helmet_detection: '安全帽偵測',
-      no_helmet: '未戴安全帽',
-      intrusion: '火焰偵測',
-      fire_detection: '火災偵測',
-      smoke_detection: '煙霧偵測',
-      fall_detection: '跌倒偵測',
-      unauthorized_access: '未授權存取',
-    };
-    return labels[alertType] || alertType;
-  };
+  // Alert type icon and label functions are now imported from @/lib/alertTypeIcons
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {

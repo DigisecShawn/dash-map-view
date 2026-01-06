@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw, Filter, Download, ShieldAlert, Eye, Calendar, Search, MoreHorizontal } from 'lucide-react';
+import { Bell, CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw, Download, ShieldAlert, Eye, Search, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
 import { Json } from '@/integrations/supabase/types';
+import { ALERT_TYPE_CONFIG, getAlertTypeIcon, getAlertTypeLabel } from '@/lib/alertTypeIcons';
 
 interface NotificationLog {
   id: string;
@@ -36,14 +36,6 @@ interface WebSocketAlert {
   created_at: string;
   metadata: Json | null;
 }
-
-const ALERT_TYPE_LABELS: Record<string, string> = {
-  'no_helmet': '未戴安全帽',
-  'no_vest': '未穿反光背心',
-  'intrusion': '火焰偵測',
-  'fire_smoke': '煙霧偵測',
-  'fall_detection': '跌倒偵測',
-};
 
 const AlarmHistory = () => {
   const [logs, setLogs] = useState<NotificationLog[]>([]);
@@ -164,7 +156,7 @@ const AlarmHistory = () => {
         alert.device_name?.toLowerCase().includes(query) ||
         alert.device_id?.toLowerCase().includes(query) ||
         alert.message?.toLowerCase().includes(query) ||
-        ALERT_TYPE_LABELS[alert.alert_type]?.toLowerCase().includes(query)
+        getAlertTypeLabel(alert.alert_type).toLowerCase().includes(query)
       );
     }
     return true;
@@ -199,7 +191,7 @@ const AlarmHistory = () => {
       const headers = ['時間', '類型', '嚴重程度', '設備ID', '設備名稱', '訊息', '已確認'];
       const rows = filteredWsAlerts.map(alert => [
         format(new Date(alert.created_at), 'yyyy-MM-dd HH:mm:ss'),
-        ALERT_TYPE_LABELS[alert.alert_type] || alert.alert_type,
+        getAlertTypeLabel(alert.alert_type),
         alert.severity,
         alert.device_id || '',
         alert.device_name || '',
@@ -405,8 +397,8 @@ const AlarmHistory = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全部類型</SelectItem>
-                    {Object.entries(ALERT_TYPE_LABELS).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    {Object.entries(ALERT_TYPE_CONFIG).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>{config.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -459,7 +451,7 @@ const AlarmHistory = () => {
                           <TableCell className="text-xs text-muted-foreground">
                             <div className="flex items-center gap-1.5">
                               <Calendar className="w-3.5 h-3.5" />
-                              {format(new Date(log.created_at), 'MM/dd HH:mm:ss', { locale: zhTW })}
+                              {format(new Date(log.created_at), 'MM/dd HH:mm:ss')}
                             </div>
                           </TableCell>
                           <TableCell>{getChannelBadge(log.channel)}</TableCell>
@@ -521,13 +513,16 @@ const AlarmHistory = () => {
                           <TableCell className="text-xs text-muted-foreground">
                             <div className="flex items-center gap-1.5">
                               <Calendar className="w-3.5 h-3.5" />
-                              {format(new Date(alert.created_at), 'MM/dd HH:mm:ss', { locale: zhTW })}
+                              {format(new Date(alert.created_at), 'MM/dd HH:mm:ss')}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
-                              {ALERT_TYPE_LABELS[alert.alert_type] || alert.alert_type}
-                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              {getAlertTypeIcon(alert.alert_type)}
+                              <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
+                                {getAlertTypeLabel(alert.alert_type)}
+                              </Badge>
+                            </div>
                           </TableCell>
                           <TableCell>{getSeverityBadge(alert.severity)}</TableCell>
                           <TableCell>
