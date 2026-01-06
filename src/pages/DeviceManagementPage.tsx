@@ -20,6 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { getStatusBadgeClass, getStatusIconClass, getStatusLabel, STATUS_CONFIG, type DeviceStatus } from '@/lib/statusUtils';
 
 interface Company {
   id: string;
@@ -547,16 +548,16 @@ const DeviceManagementPage = () => {
                 >
                   <div className="flex items-center gap-4">
                     {/* Status Icon */}
-                    <div className={`p-3 rounded-xl ${device.status === 'online' ? 'bg-success/20' : 'bg-muted'}`}>
-                      <Monitor className={`w-6 h-6 ${device.status === 'online' ? 'text-success' : 'text-muted-foreground'}`} />
+                    <div className={`p-3 rounded-xl ${STATUS_CONFIG[device.status as DeviceStatus]?.bgClass || 'bg-muted'}`}>
+                      <Monitor className={`w-6 h-6 ${getStatusIconClass(device.status as DeviceStatus)}`} />
                     </div>
 
                     {/* Device Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-lg truncate">{device.name}</h3>
-                        <Badge variant={device.status === 'online' ? 'default' : 'secondary'} className={device.status === 'online' ? 'bg-success' : ''}>
-                          {device.status === 'online' ? '在線' : '離線'}
+                        <Badge className={getStatusBadgeClass(device.status as DeviceStatus)}>
+                          {getStatusLabel(device.status as DeviceStatus, true)}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">

@@ -12,6 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 import { getAlertTypeIcon, getAlertTypeLabel, getAlertTypeSeverity, SEVERITY_CONFIG, type AlertSeverity } from '@/lib/alertTypeIcons';
+import { getStatusBadgeClass, getStatusLabel, type DeviceStatus } from '@/lib/statusUtils';
 
 interface Device {
   id: string;
@@ -618,10 +619,8 @@ const Dashboard = () => {
                     </td>
                     <td className="py-2 text-muted-foreground">{device.location || '--'}</td>
                     <td className="py-2 text-center">
-                      <Badge 
-                        className={`text-xs ${device.status === 'online' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-gray-400 hover:bg-gray-500 text-white'}`}
-                      >
-                        {device.status === 'online' ? '上線' : '離線'}
+                      <Badge className={`text-xs ${getStatusBadgeClass(device.status as DeviceStatus)}`}>
+                        {getStatusLabel(device.status as DeviceStatus)}
                       </Badge>
                     </td>
                     <td className="py-2 text-center">{device.battery ?? '--'}%</td>
