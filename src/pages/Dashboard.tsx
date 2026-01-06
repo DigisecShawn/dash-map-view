@@ -11,7 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
-import { getAlertTypeIcon, getAlertTypeLabel } from '@/lib/alertTypeIcons';
+import { getAlertTypeIcon, getAlertTypeLabel, getAlertTypeSeverity, SEVERITY_CONFIG, type AlertSeverity } from '@/lib/alertTypeIcons';
 
 interface Device {
   id: string;
@@ -253,14 +253,30 @@ const Dashboard = () => {
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
+      case 'emergency':
+        return <Badge variant="destructive" className="text-[10px] animate-pulse">緊急</Badge>;
       case 'critical':
-        return <Badge variant="destructive" className="text-[10px]">嚴重</Badge>;
+        return <Badge className="bg-orange-500 text-white text-[10px]">嚴重</Badge>;
       case 'warning':
-        return <Badge className="bg-warning text-warning-foreground text-[10px]">警告</Badge>;
+        return <Badge className="bg-yellow-500 text-black text-[10px]">警告</Badge>;
       case 'info':
         return <Badge variant="secondary" className="text-[10px]">資訊</Badge>;
       default:
         return <Badge variant="outline" className="text-[10px]">{severity}</Badge>;
+    }
+  };
+
+  // Get background color class based on severity
+  const getSeverityBgClass = (severity: string) => {
+    switch (severity) {
+      case 'emergency':
+        return 'bg-red-500/15 border-red-500/30';
+      case 'critical':
+        return 'bg-orange-500/15 border-orange-500/30';
+      case 'warning':
+        return 'bg-yellow-500/15 border-yellow-500/30';
+      default:
+        return 'bg-muted/50 border-border';
     }
   };
 
@@ -478,7 +494,7 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {filteredWsAlerts.slice(0, 3).map((alert) => (
-                      <div key={alert.id} className="flex items-center justify-between p-2 bg-warning/10 rounded-lg border border-warning/20">
+                      <div key={alert.id} className={`flex items-center justify-between p-2 rounded-lg border ${getSeverityBgClass(alert.severity)}`}>
                         <div className="flex items-center gap-2">
                           {getAlertTypeIcon(alert.alert_type)}
                           <div>
@@ -492,14 +508,14 @@ const Dashboard = () => {
                       </div>
                     ))}
                     {sensorAlarms.slice(0, 3).map((alarm, i) => (
-                      <div key={`sensor-${i}`} className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg border border-destructive/20">
+                      <div key={`sensor-${i}`} className="flex items-center justify-between p-2 bg-orange-500/15 rounded-lg border border-orange-500/30">
                         <div>
                           <p className="text-sm font-medium">{alarm.device}</p>
                           <p className="text-xs text-muted-foreground">
                             {getMetricLabel(alarm.metric)}: {alarm.value}{getMetricUnit(alarm.metric)} &gt; {alarm.threshold}{getMetricUnit(alarm.metric)}
                           </p>
                         </div>
-                        <Badge variant="destructive" className="text-[10px]">超標</Badge>
+                        <Badge className="bg-orange-500 text-white text-[10px]">超標</Badge>
                       </div>
                     ))}
                   </div>
@@ -514,14 +530,14 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {sensorAlarms.map((alarm, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg border border-destructive/20">
+                      <div key={i} className="flex items-center justify-between p-2 bg-orange-500/15 rounded-lg border border-orange-500/30">
                         <div>
                           <p className="text-sm font-medium">{alarm.device}</p>
                           <p className="text-xs text-muted-foreground">
                             {getMetricLabel(alarm.metric)}: {alarm.value}{getMetricUnit(alarm.metric)} &gt; {alarm.threshold}{getMetricUnit(alarm.metric)}
                           </p>
                         </div>
-                        <Badge variant="destructive" className="text-[10px]">超標</Badge>
+                        <Badge className="bg-orange-500 text-white text-[10px]">超標</Badge>
                       </div>
                     ))}
                   </div>
@@ -536,7 +552,7 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {filteredWsAlerts.map((alert) => (
-                      <div key={alert.id} className="flex items-center justify-between p-2 bg-warning/10 rounded-lg border border-warning/20">
+                      <div key={alert.id} className={`flex items-center justify-between p-2 rounded-lg border ${getSeverityBgClass(alert.severity)}`}>
                         <div className="flex items-center gap-2">
                           {getAlertTypeIcon(alert.alert_type)}
                           <div>
