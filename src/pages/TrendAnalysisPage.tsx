@@ -129,27 +129,24 @@ const SEVERITY_COLORS: Record<string, string> = {
   // 🟧 橘色 - 嚴重
   'critical': '#ef4444' // 🟥 紅色 - 緊急
 };
-const generateMockAlertStats = () => [{
-  type: 'no_helmet',
-  label: '未戴安全帽',
-  count: 12
-}, {
-  type: 'no_vest',
-  label: '未穿反光背心',
-  count: 8
-}, {
-  type: 'intrusion',
-  label: '火焰偵測',
-  count: 3
-}, {
-  type: 'fire_smoke',
-  label: '煙霧偵測',
-  count: 1
-}, {
-  type: 'fall_detection',
-  label: '跌倒偵測',
-  count: 2
-}];
+// Only show these 5 specific AI detection types
+const FEATURED_ALERT_TYPES = ['no_helmet', 'no_seatbelt', 'fire_detection', 'smoke_detection', 'fall_detection'];
+
+const FEATURED_ALERT_LABELS: Record<string, string> = {
+  'no_helmet': '未戴安全帽',
+  'no_seatbelt': '未戴安全帶',
+  'fire_detection': '火焰偵測',
+  'smoke_detection': '煙霧偵測',
+  'fall_detection': '跌倒偵測',
+};
+
+const generateMockAlertStats = () => [
+  { type: 'no_helmet', label: '未戴安全帽', count: 12 },
+  { type: 'no_seatbelt', label: '未戴安全帶', count: 5 },
+  { type: 'fire_detection', label: '火焰偵測', count: 3 },
+  { type: 'smoke_detection', label: '煙霧偵測', count: 1 },
+  { type: 'fall_detection', label: '跌倒偵測', count: 2 },
+];
 const generateMockSeverityStats = () => [{
   severity: 'warning',
   label: '警告',
@@ -308,17 +305,26 @@ const TrendAnalysisPage = () => {
     return filtered;
   }, [wsAlerts, companyFilteredDevices, selectedDevice]);
 
-  // WebSocket alert statistics by type
+  // WebSocket alert statistics by type - only show 5 featured types
   const wsAlertStats = useMemo(() => {
     if (filteredWsAlerts.length === 0) return generateMockAlertStats();
+    
+    // Count alerts for featured types only
     const stats: Record<string, number> = {};
-    filteredWsAlerts.forEach(alert => {
-      stats[alert.alert_type] = (stats[alert.alert_type] || 0) + 1;
+    FEATURED_ALERT_TYPES.forEach(type => {
+      stats[type] = 0;
     });
-    return Object.entries(stats).map(([type, count]) => ({
+    
+    filteredWsAlerts.forEach(alert => {
+      if (FEATURED_ALERT_TYPES.includes(alert.alert_type)) {
+        stats[alert.alert_type] = (stats[alert.alert_type] || 0) + 1;
+      }
+    });
+    
+    return FEATURED_ALERT_TYPES.map(type => ({
       type,
-      label: getAlertTypeLabel(type),
-      count
+      label: FEATURED_ALERT_LABELS[type] || getAlertTypeLabel(type),
+      count: stats[type] || 0
     }));
   }, [filteredWsAlerts]);
 
