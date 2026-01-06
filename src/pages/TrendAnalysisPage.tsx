@@ -140,6 +140,14 @@ const FEATURED_ALERT_LABELS: Record<string, string> = {
   'fall_detection': '跌倒偵測',
 };
 
+const FEATURED_ALERT_COLORS: Record<string, string> = {
+  'no_helmet': '#f59e0b',     // 橘黃色
+  'no_seatbelt': '#8b5cf6',   // 紫色
+  'fire_detection': '#ef4444', // 紅色
+  'smoke_detection': '#6b7280', // 灰色
+  'fall_detection': '#3b82f6', // 藍色
+};
+
 const generateMockAlertStats = () => [
   { type: 'no_helmet', label: '未戴安全帽', count: 12 },
   { type: 'no_seatbelt', label: '未戴安全帶', count: 5 },
@@ -328,7 +336,7 @@ const TrendAnalysisPage = () => {
     }));
   }, [filteredWsAlerts]);
 
-  // WebSocket alert trend data
+// WebSocket alert trend data
   const wsAlertTrendData = useMemo(() => {
     if (filteredWsAlerts.length === 0) return generateMockAlertData(timeRange);
     const grouped: {
@@ -353,6 +361,75 @@ const TrendAnalysisPage = () => {
     return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([time, count]) => ({
       time,
       count
+    }));
+  }, [filteredWsAlerts, timeRange]);
+
+  // Featured alert types trend data (5 key detection types)
+  const featuredAlertTrendData = useMemo(() => {
+    const is7Days = timeRange === '7d';
+    const points = is7Days ? 7 : 12;
+    const now = new Date();
+    
+    // Generate time keys
+    const timeKeys: string[] = [];
+    for (let i = 0; i < points; i++) {
+      const date = new Date(now);
+      if (is7Days) {
+        date.setDate(date.getDate() - (points - 1 - i));
+      } else {
+        date.setHours(date.getHours() - (points - 1 - i) * 2);
+      }
+      const timeKey = is7Days 
+        ? date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
+        : date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+      timeKeys.push(timeKey);
+    }
+
+    // If no real data, generate mock data
+    if (filteredWsAlerts.length === 0) {
+      return timeKeys.map((time, i) => ({
+        time,
+        no_helmet: Math.floor(Math.random() * 5) + (i % 3),
+        no_seatbelt: Math.floor(Math.random() * 3),
+        fire_detection: Math.floor(Math.random() * 2),
+        smoke_detection: Math.floor(Math.random() * 2),
+        fall_detection: Math.floor(Math.random() * 2),
+      }));
+    }
+
+    // Group real alerts by time and type
+    const grouped: Record<string, Record<string, number>> = {};
+    timeKeys.forEach(key => {
+      grouped[key] = {};
+      FEATURED_ALERT_TYPES.forEach(type => {
+        grouped[key][type] = 0;
+      });
+    });
+
+    filteredWsAlerts.forEach(alert => {
+      if (!FEATURED_ALERT_TYPES.includes(alert.alert_type)) return;
+      
+      let timeKey: string;
+      if (is7Days) {
+        timeKey = new Date(alert.created_at).toLocaleDateString('zh-TW', {
+          month: 'numeric',
+          day: 'numeric'
+        });
+      } else {
+        timeKey = new Date(alert.created_at).toLocaleTimeString('zh-TW', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
+      if (grouped[timeKey]) {
+        grouped[timeKey][alert.alert_type]++;
+      }
+    });
+
+    return timeKeys.map(time => ({
+      time,
+      ...grouped[time]
     }));
   }, [filteredWsAlerts, timeRange]);
 
@@ -626,6 +703,70 @@ const TrendAnalysisPage = () => {
             </Card>
           ))}
         </div>
+
+        {/* Featured Alert Types Trend Chart - Full Width */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              五種關鍵偵測類型趨勢
+              <div className="ml-auto flex items-center gap-4 text-xs flex-wrap">
+                {FEATURED_ALERT_TYPES.map(type => (
+                  <div key={type} className="flex items-center gap-1">
+                    <div 
+                      className="w-3 h-0.5 rounded" 
+                      style={{ backgroundColor: FEATURED_ALERT_COLORS[type] }} 
+                    />
+                    <span className="text-muted-foreground">{FEATURED_ALERT_LABELS[type]}</span>
+                  </div>
+                ))}
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={featuredAlertTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="time" 
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    allowDecimals={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }} 
+                    formatter={(value: number, name: string) => [
+                      `${value} 次`, 
+                      FEATURED_ALERT_LABELS[name] || name
+                    ]} 
+                  />
+                  <Legend 
+                    formatter={(value) => FEATURED_ALERT_LABELS[value] || value}
+                    wrapperStyle={{ paddingTop: '10px' }}
+                  />
+                  {FEATURED_ALERT_TYPES.map(type => (
+                    <Line
+                      key={type}
+                      type="monotone"
+                      dataKey={type}
+                      stroke={FEATURED_ALERT_COLORS[type]}
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: FEATURED_ALERT_COLORS[type] }}
+                      activeDot={{ r: 5 }}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Alert Charts Grid */}
         <div className="grid lg:grid-cols-2 gap-6">
