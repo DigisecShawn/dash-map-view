@@ -8,14 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import logoIcon from '@/assets/logo-icon.png';
-
 const AuthPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
@@ -53,17 +51,15 @@ const AuthPage = () => {
       setLoading(false);
     }
   };
-
-  return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
+  return <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 rounded-2xl bg-card border border-border flex items-center justify-center shadow-xl mb-4 overflow-hidden">
             <img src={logoIcon} alt="DIGISEC" className="w-16 h-16 object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-primary">DIGISEC</h1>
-          <p className="text-sm text-muted-foreground mt-1">得暘資訊 · 智慧監控平台</p>
+          <h1 className="text-2xl font-bold text-primary">DGS-MAP GPS</h1>
+          <p className="text-sm text-muted-foreground mt-1">工地智慧監控平台</p>
         </div>
 
         <Card className="border-border/50 shadow-xl">
@@ -86,12 +82,7 @@ const AuthPage = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="請輸入密碼" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10" disabled={loading} autoComplete="current-password" />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)} 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground w-6 h-6 flex items-center justify-center"
-                    aria-label={showPassword ? '隱藏密碼' : '顯示密碼'}
-                  >
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground w-6 h-6 flex items-center justify-center" aria-label={showPassword ? '隱藏密碼' : '顯示密碼'}>
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -115,8 +106,6 @@ const AuthPage = () => {
           © {new Date().getFullYear()} DIGISEC 得暘資訊. All rights reserved.
         </p>
       </div>
-    </main>
-  );
+    </main>;
 };
-
 export default AuthPage;
