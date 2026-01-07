@@ -7,8 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import logoIcon from '@/assets/logo-icon.png';
-import logoDigisecEng from '@/assets/logo-digisec-eng.png';
+import logoIconTransparent from '@/assets/logo-icon-transparent.png';
 const AuthPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -63,11 +62,11 @@ const AuthPage = () => {
       <div className="w-full max-w-[420px] relative z-10">
         {/* Logo Section */}
         <div className="flex flex-col items-center mb-10">
-          <div className="mb-6 p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 shadow-lg">
+          <div className="mb-6 w-20 h-20 flex items-center justify-center">
             <img 
               alt="DIGISEC" 
-              className="h-12 w-auto object-contain" 
-              src={logoDigisecEng} 
+              className="w-16 h-16 object-contain" 
+              src={logoIconTransparent} 
             />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
