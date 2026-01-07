@@ -1,5 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -51,6 +50,26 @@ const getMarkerColor = (state: string) => {
   }
 };
 
+const getStatusColor = (device: Device) => {
+  const state = getDeviceState(device);
+  switch (state) {
+    case 'offline': return '#6b7280';
+    case 'low-battery': return '#f59e0b';
+    case 'weak-signal': return '#3b82f6';
+    default: return '#22c55e';
+  }
+};
+
+const getStatusLabel = (device: Device) => {
+  const state = getDeviceState(device);
+  switch (state) {
+    case 'offline': return '離線';
+    case 'low-battery': return `電量不足 ${device.battery}%`;
+    case 'weak-signal': return `訊號弱 ${device.signal}%`;
+    default: return '正常運作';
+  }
+};
+
 const createCustomIcon = (device: Device, isSelected: boolean) => {
   const state = getDeviceState(device);
   const color = getMarkerColor(state);
@@ -70,6 +89,7 @@ const createCustomIcon = (device: Device, isSelected: boolean) => {
       box-shadow: ${isSelected ? '0 0 20px ' + color + '80' : '0 4px 12px rgba(0,0,0,0.3)'};
       transition: all 0.3s ease;
       ${state === 'offline' ? 'filter: grayscale(0.5);' : ''}
+      position: relative;
     ">
       <svg width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1.5">
         <path d="m22 8-6 4 6 4V8Z"/>
@@ -130,117 +150,59 @@ const createCustomIcon = (device: Device, isSelected: boolean) => {
   });
 };
 
-// Separate component for map view control
-function MapViewController({ selectedDevice, devices }: { 
-  selectedDevice: string | null; 
-  devices: Device[];
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (selectedDevice) {
-      const device = devices.find(d => d.id === selectedDevice);
-      if (device) {
-        map.flyTo([device.lat, device.lng], 15, { duration: 0.5 });
-      }
+const createPopupContent = (device: Device, onDoubleClick?: (id: string) => void) => {
+  const statusColor = getStatusColor(device);
+  const statusLabel = getStatusLabel(device);
+  
+  const container = document.createElement('div');
+  container.className = 'min-w-[180px]';
+  container.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <div style="width: 12px; height: 12px; border-radius: 50%; background: ${statusColor};"></div>
+      <span style="font-weight: 600; font-size: 14px;">${device.name}</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px;">
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: #888;">狀態:</span>
+        <span style="color: ${statusColor};">${statusLabel}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: #888;">電量:</span>
+        <span>${device.battery}%</span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: #888;">訊號:</span>
+        <span>${device.signal}%</span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: #888;">ID:</span>
+        <span style="font-family: monospace; font-size: 11px;">${device.id}</span>
+      </div>
+    </div>
+    <button id="popup-btn-${device.id}" style="
+      width: 100%;
+      margin-top: 12px;
+      padding: 6px 12px;
+      background: hsl(30, 100%, 47%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    ">查看詳情</button>
+  `;
+  
+  // Add click handler after the element is in the DOM
+  setTimeout(() => {
+    const btn = document.getElementById(`popup-btn-${device.id}`);
+    if (btn && onDoubleClick) {
+      btn.onclick = () => onDoubleClick(device.id);
     }
-  }, [selectedDevice, devices, map]);
-
-  // Return null explicitly for react-leaflet v4
-  return null;
-}
-
-// Device markers component
-function DeviceMarkers({ 
-  devices, 
-  selectedDevice,
-  onDeviceSelect,
-  onDeviceClick,
-  onDeviceDoubleClick
-}: {
-  devices: Device[];
-  selectedDevice: string | null;
-  onDeviceSelect: (id: string) => void;
-  onDeviceClick?: (id: string) => void;
-  onDeviceDoubleClick?: (id: string) => void;
-}) {
-  const getStatusLabel = (device: Device) => {
-    const state = getDeviceState(device);
-    switch (state) {
-      case 'offline': return '離線';
-      case 'low-battery': return `電量不足 ${device.battery}%`;
-      case 'weak-signal': return `訊號弱 ${device.signal}%`;
-      default: return '正常運作';
-    }
-  };
-
-  const getStatusColor = (device: Device) => {
-    const state = getDeviceState(device);
-    switch (state) {
-      case 'offline': return '#6b7280';
-      case 'low-battery': return '#f59e0b';
-      case 'weak-signal': return '#3b82f6';
-      default: return '#22c55e';
-    }
-  };
-
-  return (
-    <>
-      {devices.map((device) => (
-        <Marker
-          key={device.id}
-          position={[device.lat, device.lng]}
-          icon={createCustomIcon(device, selectedDevice === device.id)}
-          eventHandlers={{
-            click: () => {
-              onDeviceSelect(device.id);
-              onDeviceClick?.(device.id);
-            },
-            dblclick: () => {
-              onDeviceDoubleClick?.(device.id);
-            },
-          }}
-        >
-          <Popup>
-            <div className="min-w-[180px]">
-              <div className="flex items-center gap-2 mb-2">
-                <div 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ background: getStatusColor(device) }}
-                />
-                <span className="font-semibold text-base">{device.name}</span>
-              </div>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">狀態:</span>
-                  <span style={{ color: getStatusColor(device) }}>{getStatusLabel(device)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">電量:</span>
-                  <span>{device.battery}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">訊號:</span>
-                  <span>{device.signal}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">ID:</span>
-                  <span className="font-mono text-xs">{device.id}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => onDeviceDoubleClick?.(device.id)}
-                className="w-full mt-3 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
-              >
-                查看詳情
-              </button>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-    </>
-  );
-}
+  }, 0);
+  
+  return container;
+};
 
 const LeafletMap = ({ 
   devices, 
@@ -249,9 +211,12 @@ const LeafletMap = ({
   onDeviceClick, 
   onDeviceDoubleClick 
 }: LeafletMapProps) => {
+  const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const [config, setConfig] = useState<MapConfig>(defaultConfig);
-  const [mapReady, setMapReady] = useState(false);
 
+  // Load config from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('map_config');
     if (saved) {
@@ -267,41 +232,99 @@ const LeafletMap = ({
         console.error('Error parsing map config:', e);
       }
     }
-    setMapReady(true);
   }, []);
 
-  const center = useMemo<[number, number]>(() => [config.centerLat, config.centerLng], [config.centerLat, config.centerLng]);
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
 
-  if (!mapReady) {
-    return (
-      <div className="relative w-full h-full rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-        <span className="text-muted-foreground">載入地圖中...</span>
-      </div>
-    );
-  }
+    const map = L.map(mapContainerRef.current, {
+      center: [config.centerLat, config.centerLng],
+      zoom: config.defaultZoom,
+      zoomControl: true,
+      scrollWheelZoom: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [config.centerLat, config.centerLng, config.defaultZoom]);
+
+  // Update markers when devices change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Remove old markers that are no longer in devices
+    markersRef.current.forEach((marker, id) => {
+      if (!devices.find(d => d.id === id)) {
+        marker.remove();
+        markersRef.current.delete(id);
+      }
+    });
+
+    // Add or update markers
+    devices.forEach(device => {
+      const existingMarker = markersRef.current.get(device.id);
+      const isSelected = selectedDevice === device.id;
+
+      if (existingMarker) {
+        // Update existing marker
+        existingMarker.setLatLng([device.lat, device.lng]);
+        existingMarker.setIcon(createCustomIcon(device, isSelected));
+      } else {
+        // Create new marker
+        const marker = L.marker([device.lat, device.lng], {
+          icon: createCustomIcon(device, isSelected),
+        });
+
+        marker.on('click', () => {
+          onDeviceSelect(device.id);
+          onDeviceClick?.(device.id);
+        });
+
+        marker.on('dblclick', () => {
+          onDeviceDoubleClick?.(device.id);
+        });
+
+        marker.bindPopup(() => createPopupContent(device, onDeviceDoubleClick));
+        marker.addTo(map);
+        markersRef.current.set(device.id, marker);
+      }
+    });
+  }, [devices, selectedDevice, onDeviceSelect, onDeviceClick, onDeviceDoubleClick]);
+
+  // Handle selected device change - fly to it
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selectedDevice) return;
+
+    const device = devices.find(d => d.id === selectedDevice);
+    if (device) {
+      map.flyTo([device.lat, device.lng], 15, { duration: 0.5 });
+    }
+  }, [selectedDevice, devices]);
+
+  // Update marker icons when selection changes
+  useEffect(() => {
+    devices.forEach(device => {
+      const marker = markersRef.current.get(device.id);
+      if (marker) {
+        marker.setIcon(createCustomIcon(device, selectedDevice === device.id));
+      }
+    });
+  }, [selectedDevice, devices]);
 
   return (
     <div className="relative w-full h-full rounded-lg overflow-hidden leaflet-map-wrapper">
-      <MapContainer
-        center={center}
-        zoom={config.defaultZoom}
-        className="w-full h-full"
-        zoomControl={true}
-        scrollWheelZoom={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <MapViewController selectedDevice={selectedDevice} devices={devices} />
-        <DeviceMarkers 
-          devices={devices}
-          selectedDevice={selectedDevice}
-          onDeviceSelect={onDeviceSelect}
-          onDeviceClick={onDeviceClick}
-          onDeviceDoubleClick={onDeviceDoubleClick}
-        />
-      </MapContainer>
+      <div ref={mapContainerRef} className="w-full h-full" />
     </div>
   );
 };
