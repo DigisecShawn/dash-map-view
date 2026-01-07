@@ -72,7 +72,7 @@ const AuthPage = () => {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent tracking-tight">
             DGS-MAP GPS
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">工地智慧監控平台</p>
+          <p className="text-sm text-muted-foreground mt-1">智慧 x 工地監控平台</p>
         </div>
 
         {/* Login Card */}
