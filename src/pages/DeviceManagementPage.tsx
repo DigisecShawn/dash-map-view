@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Monitor, Bell, Trash2, Plus, Edit2, Camera, Video, Cctv, Webcam, ScanEye, Eye, LucideIcon, Building2, Factory, ChevronRight, Search, Filter, MoreVertical, Settings, Signal, Battery, Wifi, Thermometer, Droplets, Wind, Volume2, AlertTriangle, Image, Play, Link2, ExternalLink, ChevronDown, X } from 'lucide-react';
+import { Monitor, Bell, Trash2, Plus, Edit2, Camera, Video, Cctv, Webcam, ScanEye, LucideIcon, Building2, Factory, ChevronRight, Search, Filter, MoreVertical, Signal, Battery, Wifi, Thermometer, Droplets, Wind, Volume2, AlertTriangle, Image, Link2, ExternalLink, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
