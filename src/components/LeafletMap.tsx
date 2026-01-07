@@ -214,30 +214,39 @@ const LeafletMap = ({
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
-  const [config, setConfig] = useState<MapConfig>(defaultConfig);
+  const [isMapReady, setIsMapReady] = useState(false);
 
-  // Load config from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('map_config');
-    if (saved) {
-      try {
+  // Get config from localStorage synchronously for initial render
+  const getInitialConfig = (): MapConfig => {
+    try {
+      const saved = localStorage.getItem('map_config');
+      if (saved) {
         const parsedConfig = JSON.parse(saved);
-        setConfig({
+        return {
           provider: parsedConfig.provider || defaultConfig.provider,
           defaultZoom: parsedConfig.defaultZoom || defaultConfig.defaultZoom,
           centerLat: parsedConfig.centerLat ?? defaultConfig.centerLat,
           centerLng: parsedConfig.centerLng ?? defaultConfig.centerLng,
-        });
-      } catch (e) {
-        console.error('Error parsing map config:', e);
+        };
       }
+    } catch (e) {
+      console.error('Error parsing map config:', e);
     }
-  }, []);
+    return defaultConfig;
+  };
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (!mapContainerRef.current) return;
+    
+    // Clean up existing map if any
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
 
+    const config = getInitialConfig();
+    
     const map = L.map(mapContainerRef.current, {
       center: [config.centerLat, config.centerLng],
       zoom: config.defaultZoom,
@@ -250,17 +259,24 @@ const LeafletMap = ({
     }).addTo(map);
 
     mapRef.current = map;
+    setIsMapReady(true);
+
+    // Invalidate size after a short delay to ensure proper rendering
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
 
     return () => {
       map.remove();
       mapRef.current = null;
+      setIsMapReady(false);
     };
-  }, [config.centerLat, config.centerLng, config.defaultZoom]);
+  }, []);
 
   // Update markers when devices change
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !isMapReady) return;
 
     // Remove old markers that are no longer in devices
     markersRef.current.forEach((marker, id) => {
@@ -299,7 +315,7 @@ const LeafletMap = ({
         markersRef.current.set(device.id, marker);
       }
     });
-  }, [devices, selectedDevice, onDeviceSelect, onDeviceClick, onDeviceDoubleClick]);
+  }, [devices, selectedDevice, isMapReady, onDeviceSelect, onDeviceClick, onDeviceDoubleClick]);
 
   // Handle selected device change - fly to it
   useEffect(() => {
@@ -323,8 +339,11 @@ const LeafletMap = ({
   }, [selectedDevice, devices]);
 
   return (
-    <div className="relative w-full h-full rounded-lg overflow-hidden leaflet-map-wrapper">
-      <div ref={mapContainerRef} className="w-full h-full" />
+    <div className="absolute inset-0 leaflet-map-wrapper">
+      <div 
+        ref={mapContainerRef} 
+        style={{ width: '100%', height: '100%', minHeight: '400px' }}
+      />
     </div>
   );
 };

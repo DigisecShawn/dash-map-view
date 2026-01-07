@@ -147,7 +147,7 @@ const MapPage = () => {
   );
 
   return (
-    <div className="h-full flex">
+    <div className="h-screen flex" style={{ height: '100vh' }}>
       {/* Mobile sidebar trigger */}
       <div className="lg:hidden absolute top-4 left-4 z-10">
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -174,16 +174,14 @@ const MapPage = () => {
       </aside>
 
       {/* Map area */}
-      <main className="flex-1 relative h-full">
-        <div className="h-full">
-          <LeafletMap
-            devices={devices}
-            selectedDevice={selectedDevice}
-            onDeviceSelect={handleDeviceSelect}
-            onDeviceClick={handleDeviceClick}
-            onDeviceDoubleClick={handleDeviceDoubleClick}
-          />
-        </div>
+      <main className="flex-1 relative h-full overflow-hidden">
+        <LeafletMap
+          devices={devices}
+          selectedDevice={selectedDevice}
+          onDeviceSelect={handleDeviceSelect}
+          onDeviceClick={handleDeviceClick}
+          onDeviceDoubleClick={handleDeviceDoubleClick}
+        />
 
         {showDetails && (
           <DeviceDetails
