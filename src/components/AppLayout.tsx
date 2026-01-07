@@ -9,7 +9,9 @@ import { cn } from '@/lib/utils';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useAuth } from '@/hooks/useAuth';
 import { useRoutePreload } from '@/hooks/useRoutePreload';
-import logoDigisec from '@/assets/logo-digisec.png';
+import { useTheme } from 'next-themes';
+import logoLight from '@/assets/logo-light.png';
+import logoDark from '@/assets/logo-dark.png';
 import logoIcon from '@/assets/logo-icon.png';
 import {
   DropdownMenu,
@@ -44,8 +46,11 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const { user, role, isAdmin, signOut, loading, isAuthenticated } = useAuth();
   const { preloadOnHover } = useRoutePreload();
+  const { resolvedTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const currentLogo = resolvedTheme === 'dark' ? logoDark : logoLight;
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -105,7 +110,7 @@ const AppLayout = () => {
         <div className="flex items-center justify-between h-16 px-4 border-b border-border shrink-0">
           {sidebarOpen ? (
             <Link to="/" className="flex items-center gap-2">
-              <img src={logoDigisec} alt="DIGISEC" className="h-8 w-auto" />
+              <img src={currentLogo} alt="DIGISEC" className="h-8 w-auto" />
             </Link>
           ) : (
             <Link to="/" className="flex items-center justify-center">
@@ -235,7 +240,7 @@ const AppLayout = () => {
             <Menu className="w-5 h-5" />
           </Button>
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoDigisec} alt="DIGISEC" className="h-7 w-auto" />
+            <img src={currentLogo} alt="DIGISEC" className="h-7 w-auto" />
           </Link>
           <div className="ml-auto flex items-center gap-2">
             <Link
