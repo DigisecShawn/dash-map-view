@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, User, BarChart3 } from 'lucide-react';
+import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import logoIcon from '@/assets/logo-icon.png';
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -58,11 +59,11 @@ const AuthPage = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow mb-4">
-            <BarChart3 className="w-8 h-8 text-white" />
+          <div className="w-20 h-20 rounded-2xl bg-card border border-border flex items-center justify-center shadow-xl mb-4 overflow-hidden">
+            <img src={logoIcon} alt="DIGISEC" className="w-16 h-16 object-contain" />
           </div>
-          <h1 className="text-2xl font-bold">DGS-MAP GPS</h1>
-          <p className="text-muted-foreground mt-1">設備監控管理平台</p>
+          <h1 className="text-2xl font-bold text-primary">DIGISEC</h1>
+          <p className="text-sm text-muted-foreground mt-1">得暘資訊 · 智慧監控平台</p>
         </div>
 
         <Card className="border-border/50 shadow-xl">
@@ -111,7 +112,7 @@ const AuthPage = () => {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          © {new Date().getFullYear()} DGS-MAP GPS. All rights reserved.
+          © {new Date().getFullYear()} DIGISEC 得暘資訊. All rights reserved.
         </p>
       </div>
     </main>

@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, MapPin, Monitor, Bell, History, Wifi, 
-  Menu, X, ChevronLeft, BarChart3, TrendingUp, Building2, Shield, LogOut, User
+  Menu, X, ChevronLeft, TrendingUp, Building2, Shield, LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useAuth } from '@/hooks/useAuth';
+import logoDigisec from '@/assets/logo-digisec.png';
+import logoIcon from '@/assets/logo-icon.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,12 +102,13 @@ const AppLayout = () => {
       >
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-border shrink-0">
-          {sidebarOpen && (
+          {sidebarOpen ? (
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
-                <BarChart3 className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold text-lg">監控系統</span>
+              <img src={logoDigisec} alt="DIGISEC" className="h-8 w-auto" />
+            </Link>
+          ) : (
+            <Link to="/" className="flex items-center justify-center">
+              <img src={logoIcon} alt="DIGISEC" className="h-8 w-8 object-contain" />
             </Link>
           )}
           <Button
@@ -217,12 +220,9 @@ const AppLayout = () => {
           >
             <Menu className="w-5 h-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <BarChart3 className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="font-semibold">監控系統</span>
-          </div>
+          <Link to="/" className="flex items-center gap-2">
+            <img src={logoDigisec} alt="DIGISEC" className="h-7 w-auto" />
+          </Link>
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
             <DropdownMenu>
