@@ -179,7 +179,7 @@ const createPopupContent = (device: Device, onDoubleClick?: (id: string) => void
         <span style="font-family: monospace; font-size: 11px;">${device.id}</span>
       </div>
     </div>
-    <button id="popup-btn-${device.id}" style="
+    <button class="popup-detail-btn" style="
       width: 100%;
       margin-top: 12px;
       padding: 6px 12px;
@@ -193,13 +193,14 @@ const createPopupContent = (device: Device, onDoubleClick?: (id: string) => void
     ">查看詳情</button>
   `;
   
-  // Add click handler after the element is in the DOM
-  setTimeout(() => {
-    const btn = document.getElementById(`popup-btn-${device.id}`);
-    if (btn && onDoubleClick) {
-      btn.onclick = () => onDoubleClick(device.id);
-    }
-  }, 0);
+  // Bind click handler directly to the button element
+  const btn = container.querySelector('.popup-detail-btn');
+  if (btn && onDoubleClick) {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onDoubleClick(device.id);
+    });
+  }
   
   return container;
 };
@@ -214,6 +215,7 @@ const LeafletMap = ({
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  const configRef = useRef<MapConfig>(defaultConfig);
   const [isMapReady, setIsMapReady] = useState(false);
 
   // Get config from localStorage synchronously for initial render
@@ -246,6 +248,7 @@ const LeafletMap = ({
     }
 
     const config = getInitialConfig();
+    configRef.current = config;
     
     const map = L.map(mapContainerRef.current, {
       center: [config.centerLat, config.centerLng],
@@ -317,14 +320,16 @@ const LeafletMap = ({
     });
   }, [devices, selectedDevice, isMapReady, onDeviceSelect, onDeviceClick, onDeviceDoubleClick]);
 
-  // Handle selected device change - fly to it
+  // Handle selected device change - fly to it using config zoom level
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedDevice) return;
 
     const device = devices.find(d => d.id === selectedDevice);
     if (device) {
-      map.flyTo([device.lat, device.lng], 15, { duration: 0.5 });
+      // Use configured zoom level + 3 for better focus, max 18
+      const targetZoom = Math.min(configRef.current.defaultZoom + 3, 18);
+      map.flyTo([device.lat, device.lng], targetZoom, { duration: 0.5 });
     }
   }, [selectedDevice, devices]);
 
