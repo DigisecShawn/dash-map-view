@@ -195,29 +195,7 @@ const LeafletMap = ({
   };
 
   return (
-    <div className="relative w-full h-full rounded-lg overflow-hidden">
-      <style>{`
-        .custom-device-marker {
-          background: transparent !important;
-          border: none !important;
-        }
-        .leaflet-popup-content-wrapper {
-          background: hsl(var(--card));
-          color: hsl(var(--card-foreground));
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-          border: 1px solid hsl(var(--border));
-        }
-        .leaflet-popup-tip {
-          background: hsl(var(--card));
-        }
-        .leaflet-popup-content {
-          margin: 12px 16px;
-        }
-        .leaflet-container {
-          background: hsl(var(--background));
-        }
-      `}</style>
+    <div className="relative w-full h-full rounded-lg overflow-hidden leaflet-map-wrapper">
       <MapContainer
         center={[config.centerLat, config.centerLng]}
         zoom={config.defaultZoom}

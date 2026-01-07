@@ -121,3 +121,29 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Leaflet Map Styles */
+.custom-device-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-map-wrapper .leaflet-popup-content-wrapper {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  border: 1px solid hsl(var(--border));
+}
+
+.leaflet-map-wrapper .leaflet-popup-tip {
+  background: hsl(var(--card));
+}
+
+.leaflet-map-wrapper .leaflet-popup-content {
+  margin: 12px 16px;
+}
+
+.leaflet-map-wrapper .leaflet-container {
+  background: hsl(var(--background));
+}
