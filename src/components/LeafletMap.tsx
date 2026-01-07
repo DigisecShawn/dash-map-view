@@ -307,6 +307,7 @@ const LeafletMap = ({
         marker.on('click', () => {
           onDeviceSelect(device.id);
           onDeviceClick?.(device.id);
+          marker.openPopup();
         });
 
         marker.on('dblclick', () => {
