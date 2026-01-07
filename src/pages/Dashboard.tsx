@@ -1,19 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
-import { 
-  Monitor, Wifi, WifiOff, AlertTriangle, Building2, MapPin, ChevronRight, Sun
-} from 'lucide-react';
+import { Monitor, Wifi, WifiOff, AlertTriangle, Building2, MapPin, ChevronRight, Sun } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 import { getAlertTypeIcon, getAlertTypeLabel, getAlertTypeSeverity, SEVERITY_CONFIG, type AlertSeverity } from '@/lib/alertTypeIcons';
 import { getStatusBadgeClass, getStatusLabel, type DeviceStatus } from '@/lib/statusUtils';
-
 interface Device {
   id: string;
   device_id: string;
@@ -26,7 +22,6 @@ interface Device {
   site_id: string | null;
   current_solar_power: number | null;
 }
-
 interface SensorData {
   device_id: string;
   temperature: number | null;
@@ -36,14 +31,12 @@ interface SensorData {
   noise: number | null;
   recorded_at: string;
 }
-
 interface AlarmThreshold {
   device_id: string;
   metric_type: string;
   threshold_value: number;
   enabled: boolean;
 }
-
 interface WebSocketAlert {
   id: string;
   alert_type: string;
@@ -54,14 +47,12 @@ interface WebSocketAlert {
   acknowledged: boolean;
   created_at: string;
 }
-
 const Dashboard = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
   const [thresholds, setThresholds] = useState<AlarmThreshold[]>([]);
   const [wsAlerts, setWsAlerts] = useState<WebSocketAlert[]>([]);
   const [loading, setLoading] = useState(true);
-
   const {
     companies,
     filteredSites,
@@ -71,53 +62,32 @@ const Dashboard = () => {
     setSelectedSiteId,
     loading: filterLoading,
     getCompanyName,
-    getSiteName,
+    getSiteName
   } = useCompanySiteFilter();
-
   useEffect(() => {
     fetchData();
 
     // Subscribe to realtime WebSocket alerts
-    const channel = supabase
-      .channel('websocket-alerts')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'websocket_alerts',
-        },
-        (payload) => {
-          const newAlert = payload.new as WebSocketAlert;
-          setWsAlerts(prev => [newAlert, ...prev].slice(0, 20));
-        }
-      )
-      .subscribe();
-
+    const channel = supabase.channel('websocket-alerts').on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'websocket_alerts'
+    }, payload => {
+      const newAlert = payload.new as WebSocketAlert;
+      setWsAlerts(prev => [newAlert, ...prev].slice(0, 20));
+    }).subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
-
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [devicesRes, sensorRes, thresholdsRes, wsAlertsRes] = await Promise.all([
-        supabase.from('devices').select('*'),
-        supabase
-          .from('device_sensor_history')
-          .select('*')
-          .gte('recorded_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .order('recorded_at', { ascending: true }),
-        supabase.from('device_alarm_thresholds').select('*').eq('enabled', true),
-        supabase
-          .from('websocket_alerts')
-          .select('*')
-          .eq('acknowledged', false)
-          .order('created_at', { ascending: false })
-          .limit(20),
-      ]);
-
+      const [devicesRes, sensorRes, thresholdsRes, wsAlertsRes] = await Promise.all([supabase.from('devices').select('*'), supabase.from('device_sensor_history').select('*').gte('recorded_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()).order('recorded_at', {
+        ascending: true
+      }), supabase.from('device_alarm_thresholds').select('*').eq('enabled', true), supabase.from('websocket_alerts').select('*').eq('acknowledged', false).order('created_at', {
+        ascending: false
+      }).limit(20)]);
       if (devicesRes.data) setDevices(devicesRes.data);
       if (sensorRes.data) setSensorData(sensorRes.data);
       if (thresholdsRes.data) setThresholds(thresholdsRes.data);
@@ -132,15 +102,12 @@ const Dashboard = () => {
   // Filter devices based on company and site selection
   const filteredDevices = useMemo(() => {
     let result = devices;
-    
     if (selectedCompanyId !== 'all') {
       result = result.filter(d => d.company_id === selectedCompanyId);
     }
-    
     if (selectedSiteId !== 'all') {
       result = result.filter(d => d.site_id === selectedSiteId);
     }
-    
     return result;
   }, [devices, selectedCompanyId, selectedSiteId]);
 
@@ -151,58 +118,62 @@ const Dashboard = () => {
     const offline = filteredDevices.filter(d => d.status === 'offline').length;
     const avgBattery = filteredDevices.reduce((sum, d) => sum + (d.battery || 0), 0) / (filteredDevices.length || 1);
     const avgSignal = filteredDevices.reduce((sum, d) => sum + (d.signal_strength || 0), 0) / (filteredDevices.length || 1);
-    return { total: filteredDevices.length, online, offline, avgBattery: Math.round(avgBattery), avgSignal: Math.round(avgSignal) };
+    return {
+      total: filteredDevices.length,
+      online,
+      offline,
+      avgBattery: Math.round(avgBattery),
+      avgSignal: Math.round(avgSignal)
+    };
   }, [filteredDevices]);
 
   // Solar power statistics
   const solarStats = useMemo(() => {
     const devicesWithSolar = filteredDevices.filter(d => d.current_solar_power !== null && d.current_solar_power > 0);
     const totalPower = filteredDevices.reduce((sum, d) => sum + (d.current_solar_power || 0), 0);
-    const avgPower = devicesWithSolar.length > 0 
-      ? totalPower / devicesWithSolar.length 
-      : 0;
+    const avgPower = devicesWithSolar.length > 0 ? totalPower / devicesWithSolar.length : 0;
     const maxPower = filteredDevices.reduce((max, d) => Math.max(max, d.current_solar_power || 0), 0);
-    
     return {
       totalPower: Math.round(totalPower * 100) / 100,
       avgPower: Math.round(avgPower * 100) / 100,
       maxPower: Math.round(maxPower * 100) / 100,
-      activeDevices: devicesWithSolar.length,
+      activeDevices: devicesWithSolar.length
     };
   }, [filteredDevices]);
 
   // Solar chart data
   const solarChartData = useMemo(() => {
-    return filteredDevices
-      .filter(d => d.current_solar_power !== null)
-      .map(d => ({
-        name: d.name.length > 8 ? d.name.substring(0, 8) + '...' : d.name,
-        fullName: d.name,
-        power: d.current_solar_power || 0,
-      }))
-      .sort((a, b) => b.power - a.power);
+    return filteredDevices.filter(d => d.current_solar_power !== null).map(d => ({
+      name: d.name.length > 8 ? d.name.substring(0, 8) + '...' : d.name,
+      fullName: d.name,
+      power: d.current_solar_power || 0
+    })).sort((a, b) => b.power - a.power);
   }, [filteredDevices]);
 
   // Sensor-based active alarms (filtered by device)
   const sensorAlarms = useMemo(() => {
     if (sensorData.length === 0 || thresholds.length === 0) return [];
-    
     const filteredDeviceIds = new Set(filteredDevices.map(d => d.device_id));
-    
-    const latestByDevice: { [key: string]: SensorData } = {};
+    const latestByDevice: {
+      [key: string]: SensorData;
+    } = {};
     sensorData.forEach(d => {
       if (!filteredDeviceIds.has(d.device_id)) return;
       if (!latestByDevice[d.device_id] || new Date(d.recorded_at) > new Date(latestByDevice[d.device_id].recorded_at)) {
         latestByDevice[d.device_id] = d;
       }
     });
-
-    const alarms: { device: string; metric: string; value: number; threshold: number; type: 'sensor' }[] = [];
+    const alarms: {
+      device: string;
+      metric: string;
+      value: number;
+      threshold: number;
+      type: 'sensor';
+    }[] = [];
     thresholds.forEach(t => {
       if (!filteredDeviceIds.has(t.device_id)) return;
       const data = latestByDevice[t.device_id];
       if (!data) return;
-      
       const value = data[t.metric_type as keyof SensorData] as number;
       if (value !== null && value > t.threshold_value) {
         const device = filteredDevices.find(d => d.device_id === t.device_id);
@@ -211,7 +182,7 @@ const Dashboard = () => {
           metric: t.metric_type,
           value,
           threshold: t.threshold_value,
-          type: 'sensor',
+          type: 'sensor'
         });
       }
     });
@@ -226,26 +197,27 @@ const Dashboard = () => {
 
   // Total alarm count
   const totalAlarmCount = sensorAlarms.length + filteredWsAlerts.length;
-
-
   const getMetricLabel = (metric: string) => {
-    const labels: { [key: string]: string } = {
+    const labels: {
+      [key: string]: string;
+    } = {
       temperature: '溫度',
       humidity: '濕度',
       pm25: 'PM2.5',
       pm10: 'PM10',
-      noise: '噪音',
+      noise: '噪音'
     };
     return labels[metric] || metric;
   };
-
   const getMetricUnit = (metric: string) => {
-    const units: { [key: string]: string } = {
+    const units: {
+      [key: string]: string;
+    } = {
       temperature: '°C',
       humidity: '%',
       pm25: 'μg/m³',
       pm10: 'μg/m³',
-      noise: 'dB',
+      noise: 'dB'
     };
     return units[metric] || '';
   };
@@ -280,22 +252,19 @@ const Dashboard = () => {
         return 'bg-muted/50 border-border';
     }
   };
-
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('zh-TW', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
-
   if (loading || filterLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+    return <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="p-6 space-y-6">
+  return <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">數據儀表板</h1>
@@ -303,34 +272,23 @@ const Dashboard = () => {
         </div>
         
         {/* Company/Site Filter */}
-        <CompanySiteFilter
-          companies={companies}
-          filteredSites={filteredSites}
-          selectedCompanyId={selectedCompanyId}
-          selectedSiteId={selectedSiteId}
-          onCompanyChange={setSelectedCompanyId}
-          onSiteChange={setSelectedSiteId}
-        />
+        <CompanySiteFilter companies={companies} filteredSites={filteredSites} selectedCompanyId={selectedCompanyId} selectedSiteId={selectedSiteId} onCompanyChange={setSelectedCompanyId} onSiteChange={setSelectedSiteId} />
       </div>
 
       {/* Current Filter Badge */}
-      {(selectedCompanyId !== 'all' || selectedSiteId !== 'all') && (
-        <div className="flex items-center gap-2 flex-wrap">
+      {(selectedCompanyId !== 'all' || selectedSiteId !== 'all') && <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="text-sm flex items-center gap-1">
             <Building2 className="w-3 h-3" />
             {selectedCompanyId === 'all' ? '全部公司' : getCompanyName(selectedCompanyId)}
           </Badge>
-          {selectedSiteId !== 'all' && (
-            <>
+          {selectedSiteId !== 'all' && <>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
               <Badge variant="outline" className="text-sm flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
                 {getSiteName(selectedSiteId)}
               </Badge>
-            </>
-          )}
-        </div>
-      )}
+            </>}
+        </div>}
 
       {/* Device Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -397,50 +355,41 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {solarChartData.length === 0 ? (
-              <div className="flex items-center justify-center h-48 text-muted-foreground">
+            {solarChartData.length === 0 ? <div className="flex items-center justify-center h-48 text-muted-foreground">
                 <p>目前沒有太陽能發電數據</p>
-              </div>
-            ) : (
-              <div className="h-48">
+              </div> : <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={solarChartData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                  <BarChart data={solarChartData} layout="vertical" margin={{
+                top: 5,
+                right: 30,
+                left: 10,
+                bottom: 5
+              }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis 
-                      type="number" 
-                      unit=" kW" 
-                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                      axisLine={{ stroke: 'hsl(var(--border))' }}
-                    />
-                    <YAxis 
-                      type="category" 
-                      dataKey="name" 
-                      width={70}
-                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                      axisLine={{ stroke: 'hsl(var(--border))' }}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [`${value} kW`, '發電量']}
-                      labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        fontSize: '12px'
-                      }}
-                    />
+                    <XAxis type="number" unit=" kW" tick={{
+                  fontSize: 11,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} axisLine={{
+                  stroke: 'hsl(var(--border))'
+                }} />
+                    <YAxis type="category" dataKey="name" width={70} tick={{
+                  fontSize: 11,
+                  fill: 'hsl(var(--muted-foreground))'
+                }} axisLine={{
+                  stroke: 'hsl(var(--border))'
+                }} />
+                    <Tooltip formatter={(value: number) => [`${value} kW`, '發電量']} labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label} contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: '12px'
+                }} />
                     <Bar dataKey="power" radius={[0, 4, 4, 0]}>
-                      {solarChartData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={`hsl(${45 - index * 8}, 90%, ${55 + index * 3}%)`}
-                        />
-                      ))}
+                      {solarChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={`hsl(${45 - index * 8}, 90%, ${55 + index * 3}%)`} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-            )}
+              </div>}
             
             {/* Summary Stats */}
             <div className="mt-3 grid grid-cols-3 gap-2">
@@ -453,7 +402,7 @@ const Dashboard = () => {
                 <span className="font-semibold text-orange-600 dark:text-orange-400">{solarStats.maxPower} kW</span>
               </div>
               <div className="flex flex-col items-center p-2 bg-muted/30 rounded-lg">
-                <span className="text-xs text-muted-foreground">發電中</span>
+                <span className="text-xs text-muted-foreground">運轉中</span>
                 <span className="font-semibold">{solarStats.activeDevices} 台</span>
               </div>
             </div>
@@ -466,11 +415,9 @@ const Dashboard = () => {
             <CardTitle className="text-base flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-warning" />
               活動警報
-              {totalAlarmCount > 0 && (
-                <Badge variant="destructive" className="ml-auto text-xs">
+              {totalAlarmCount > 0 && <Badge variant="destructive" className="ml-auto text-xs">
                   {totalAlarmCount}
-                </Badge>
-              )}
+                </Badge>}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -488,14 +435,10 @@ const Dashboard = () => {
               </TabsList>
 
               <TabsContent value="all" className="mt-0">
-                {totalAlarmCount === 0 ? (
-                  <div className="flex items-center justify-center h-24 text-muted-foreground">
+                {totalAlarmCount === 0 ? <div className="flex items-center justify-center h-24 text-muted-foreground">
                     <p>目前沒有活動警報</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {filteredWsAlerts.slice(0, 3).map((alert) => (
-                      <div key={alert.id} className={`flex items-center justify-between p-2 rounded-lg border ${getSeverityBgClass(alert.severity)}`}>
+                  </div> : <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {filteredWsAlerts.slice(0, 3).map(alert => <div key={alert.id} className={`flex items-center justify-between p-2 rounded-lg border ${getSeverityBgClass(alert.severity)}`}>
                         <div className="flex items-center gap-2">
                           {getAlertTypeIcon(alert.alert_type)}
                           <div>
@@ -506,10 +449,8 @@ const Dashboard = () => {
                           </div>
                         </div>
                         {getSeverityBadge(alert.severity)}
-                      </div>
-                    ))}
-                    {sensorAlarms.slice(0, 3).map((alarm, i) => (
-                      <div key={`sensor-${i}`} className="flex items-center justify-between p-2 bg-orange-500/15 rounded-lg border border-orange-500/30">
+                      </div>)}
+                    {sensorAlarms.slice(0, 3).map((alarm, i) => <div key={`sensor-${i}`} className="flex items-center justify-between p-2 bg-orange-500/15 rounded-lg border border-orange-500/30">
                         <div>
                           <p className="text-sm font-medium">{alarm.device}</p>
                           <p className="text-xs text-muted-foreground">
@@ -517,21 +458,15 @@ const Dashboard = () => {
                           </p>
                         </div>
                         <Badge className="bg-orange-500 text-white text-[10px]">超標</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </div>)}
+                  </div>}
               </TabsContent>
 
               <TabsContent value="sensor" className="mt-0">
-                {sensorAlarms.length === 0 ? (
-                  <div className="flex items-center justify-center h-24 text-muted-foreground">
+                {sensorAlarms.length === 0 ? <div className="flex items-center justify-center h-24 text-muted-foreground">
                     <p>目前沒有感測器警報</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {sensorAlarms.map((alarm, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 bg-orange-500/15 rounded-lg border border-orange-500/30">
+                  </div> : <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {sensorAlarms.map((alarm, i) => <div key={i} className="flex items-center justify-between p-2 bg-orange-500/15 rounded-lg border border-orange-500/30">
                         <div>
                           <p className="text-sm font-medium">{alarm.device}</p>
                           <p className="text-xs text-muted-foreground">
@@ -539,21 +474,15 @@ const Dashboard = () => {
                           </p>
                         </div>
                         <Badge className="bg-orange-500 text-white text-[10px]">超標</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </div>)}
+                  </div>}
               </TabsContent>
 
               <TabsContent value="websocket" className="mt-0">
-                {filteredWsAlerts.length === 0 ? (
-                  <div className="flex items-center justify-center h-24 text-muted-foreground">
+                {filteredWsAlerts.length === 0 ? <div className="flex items-center justify-center h-24 text-muted-foreground">
                     <p>目前沒有 AI 偵測警報</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {filteredWsAlerts.map((alert) => (
-                      <div key={alert.id} className={`flex items-center justify-between p-2 rounded-lg border ${getSeverityBgClass(alert.severity)}`}>
+                  </div> : <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {filteredWsAlerts.map(alert => <div key={alert.id} className={`flex items-center justify-between p-2 rounded-lg border ${getSeverityBgClass(alert.severity)}`}>
                         <div className="flex items-center gap-2">
                           {getAlertTypeIcon(alert.alert_type)}
                           <div>
@@ -561,18 +490,14 @@ const Dashboard = () => {
                             <p className="text-xs text-muted-foreground">
                               {getAlertTypeLabel(alert.alert_type)} • {formatTime(alert.created_at)}
                             </p>
-                            {alert.message && (
-                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            {alert.message && <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                                 {alert.message}
-                              </p>
-                            )}
+                              </p>}
                           </div>
                         </div>
                         {getSeverityBadge(alert.severity)}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </div>)}
+                  </div>}
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -602,8 +527,7 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredDevices.map(device => (
-                  <tr key={device.id} className="border-b border-border/50 hover:bg-muted/50">
+                {filteredDevices.map(device => <tr key={device.id} className="border-b border-border/50 hover:bg-muted/50">
                     <td className="py-2 font-medium">{device.name}</td>
                     <td className="py-2 text-muted-foreground">
                       <div className="flex items-center gap-1">
@@ -625,15 +549,12 @@ const Dashboard = () => {
                     </td>
                     <td className="py-2 text-center">{device.battery ?? '--'}%</td>
                     <td className="py-2 text-center">{device.signal_strength ?? '--'}%</td>
-                  </tr>
-                ))}
+                  </tr>)}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
