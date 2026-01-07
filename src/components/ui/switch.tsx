@@ -16,10 +16,10 @@ const Switch = React.forwardRef<
     {...props}
     ref={ref}
   >
-    <span className="absolute left-1.5 text-[10px] font-semibold text-white opacity-0 transition-opacity data-[state=checked]:opacity-100 select-none pointer-events-none z-10">
+    <span className="absolute left-1.5 text-[10px] font-semibold text-white opacity-0 transition-opacity data-[state=checked]:opacity-100 peer-data-[state=checked]:opacity-100 select-none">
       ON
     </span>
-    <span className="absolute right-2 text-[10px] font-semibold text-gray-500 dark:text-gray-400 opacity-100 transition-opacity data-[state=checked]:opacity-0 select-none pointer-events-none z-10">
+    <span className="absolute right-1.5 text-[10px] font-semibold text-gray-500 dark:text-gray-400 opacity-100 transition-opacity data-[state=checked]:opacity-0 peer-data-[state=checked]:opacity-0 select-none">
       OFF
     </span>
     <SwitchPrimitives.Thumb
