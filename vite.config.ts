@@ -17,15 +17,44 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: true,
+    target: 'esnext',
+    minify: 'esbuild',
+    cssMinify: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Split large vendor libraries into separate chunks
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-charts': ['recharts'],
-          'vendor-maps': ['@vis.gl/react-google-maps'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-popover', '@radix-ui/react-select', '@radix-ui/react-tabs'],
+        manualChunks: (id) => {
+          // Core React libraries
+          if (id.includes('react-dom') || id.includes('react/')) {
+            return 'vendor-react';
+          }
+          // React Router
+          if (id.includes('react-router')) {
+            return 'vendor-router';
+          }
+          // Charting library (heavy)
+          if (id.includes('recharts') || id.includes('d3-')) {
+            return 'vendor-charts';
+          }
+          // Map libraries (heavy, rarely used on initial load)
+          if (id.includes('@vis.gl') || id.includes('leaflet') || id.includes('react-leaflet')) {
+            return 'vendor-maps';
+          }
+          // Supabase SDK
+          if (id.includes('@supabase')) {
+            return 'vendor-supabase';
+          }
+          // Radix UI components
+          if (id.includes('@radix-ui')) {
+            return 'vendor-radix';
+          }
+          // Other UI utilities
+          if (id.includes('lucide-react')) {
+            return 'vendor-icons';
+          }
+          // TanStack Query
+          if (id.includes('@tanstack')) {
+            return 'vendor-query';
+          }
         },
       },
     },
