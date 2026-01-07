@@ -12,7 +12,7 @@ import { useRoutePreload } from '@/hooks/useRoutePreload';
 import { useTheme } from 'next-themes';
 import logoLight from '@/assets/logo-light.png';
 import logoDark from '@/assets/logo-dark.png';
-import logoIcon from '@/assets/logo-icon.png';
+import logoIconOrange from '@/assets/logo-icon-orange.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -114,7 +114,7 @@ const AppLayout = () => {
             </Link>
           ) : (
             <Link to="/" className="flex items-center justify-center">
-              <img src={logoIcon} alt="DIGISEC" className="h-8 w-8 object-contain" />
+              <img src={logoIconOrange} alt="DIGISEC" className="h-8 w-8 object-contain" />
             </Link>
           )}
           <Button
