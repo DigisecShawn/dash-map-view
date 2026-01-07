@@ -133,10 +133,9 @@ const createCustomIcon = (device: Device, isSelected: boolean) => {
 };
 
 // Component to handle map view changes
-const MapController = ({ selectedDevice, devices, config }: { 
+const MapController = ({ selectedDevice, devices }: { 
   selectedDevice: string | null; 
   devices: Device[];
-  config: MapConfig;
 }) => {
   const map = useMap();
 
@@ -149,7 +148,7 @@ const MapController = ({ selectedDevice, devices, config }: {
     }
   }, [selectedDevice, devices, map]);
 
-  return null;
+  return <></>;
 };
 
 const LeafletMap = ({ 
@@ -230,7 +229,7 @@ const LeafletMap = ({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapController selectedDevice={selectedDevice} devices={devices} config={config} />
+        <MapController selectedDevice={selectedDevice} devices={devices} />
         
         {devices.map((device) => (
           <Marker
