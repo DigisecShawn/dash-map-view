@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Search, Menu } from 'lucide-react';
-import Map from '@/components/Map';
+import LeafletMap from '@/components/LeafletMap';
 import DeviceCard from '@/components/DeviceCard';
 import DeviceDetails from '@/components/DeviceDetails';
 import { Input } from '@/components/ui/input';
@@ -40,7 +40,6 @@ const MapPage = () => {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetails, setShowDetails] = useState(false);
-  const apiKey = 'AIzaSyCPvsAfPyv9yhjaJDwD5SnkYiuQY9WkIYk';
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchDevices = useCallback(async () => {
@@ -175,15 +174,14 @@ const MapPage = () => {
       </aside>
 
       {/* Map area */}
-      <main className="flex-1 relative">
-        <div className="h-full p-2 sm:p-4">
-          <Map
+      <main className="flex-1 relative h-full">
+        <div className="h-full">
+          <LeafletMap
             devices={devices}
             selectedDevice={selectedDevice}
             onDeviceSelect={handleDeviceSelect}
             onDeviceClick={handleDeviceClick}
             onDeviceDoubleClick={handleDeviceDoubleClick}
-            apiKey={apiKey}
           />
         </div>
 
