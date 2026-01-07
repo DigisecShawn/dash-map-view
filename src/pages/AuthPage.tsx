@@ -61,18 +61,18 @@ const AuthPage = () => {
 
       <div className="w-full max-w-[420px] relative z-10">
         {/* Logo Section */}
-        <div className="flex flex-col items-center mb-10">
-          <div className="mb-6 w-20 h-20 flex items-center justify-center">
+        <div className="flex flex-col items-center mb-8">
+          <div className="mb-4 w-24 h-24 flex items-center justify-center drop-shadow-lg">
             <img 
               alt="DIGISEC" 
-              className="w-16 h-16 object-contain" 
+              className="w-20 h-20 object-contain" 
               src={logoIconTransparent} 
             />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent tracking-tight">
             DGS-MAP GPS
           </h1>
-          <p className="text-muted-foreground mt-2 tracking-wide">工地智慧監控平台</p>
+          <p className="text-sm text-muted-foreground mt-1">工地智慧監控平台</p>
         </div>
 
         {/* Login Card */}
