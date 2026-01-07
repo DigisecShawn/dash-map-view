@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import logoIcon from '@/assets/logo-icon.png';
+import logoDigisecEng from '@/assets/logo-digisec-eng.png';
 const AuthPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -56,7 +57,7 @@ const AuthPage = () => {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 rounded-2xl bg-card border border-border flex items-center justify-center shadow-xl mb-4 overflow-hidden">
-            <img alt="DIGISEC" className="w-16 h-16 object-contain" src="/lovable-uploads/719d0ec4-7cc0-4a12-83c2-a0e60560467a.png" />
+            <img alt="DIGISEC" className="w-16 h-16 object-contain" src={logoDigisecEng} />
           </div>
           <h1 className="text-2xl font-bold text-primary">DGS-MAP GPS</h1>
           <p className="text-sm text-muted-foreground mt-1">工地智慧監控平台</p>
