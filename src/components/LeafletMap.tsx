@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Video, AlertTriangle, WifiOff } from 'lucide-react';
-import { renderToString } from 'react-dom/server';
 
 interface Device {
   id: string;
