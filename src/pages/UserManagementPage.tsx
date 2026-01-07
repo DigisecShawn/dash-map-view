@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, UserCog, Users, Search, RefreshCw, Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Shield, UserCog, Users, Search, RefreshCw, Plus, Pencil, Trash2, Eye, EyeOff, Key, Settings2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -26,6 +27,13 @@ interface Account {
   created_at: string;
 }
 
+interface FeaturePermission {
+  id: string;
+  feature_key: string;
+  role: AppRole;
+  enabled: boolean;
+}
+
 const ROLE_LABELS: Record<AppRole, string> = {
   admin: '管理員',
   operator: '操作員',
@@ -38,23 +46,42 @@ const ROLE_COLORS: Record<AppRole, string> = {
   viewer: 'bg-muted text-muted-foreground',
 };
 
+const FEATURE_LABELS: Record<string, string> = {
+  'dashboard': '儀表板',
+  'trends': '趨勢分析',
+  'organizations': '組織管理',
+  'devices': '設備管理',
+  'notifications': '通知設定',
+  'websocket': 'WebSocket 轉發',
+  'map': '電子地圖',
+  'map-settings': '電子地圖設定',
+  'alarm-history': '警報歷史',
+};
+
+const ROLES: AppRole[] = ['admin', 'operator', 'viewer'];
+
 const UserManagementPage = () => {
   const navigate = useNavigate();
   const { isAdmin, loading: authLoading, isAuthenticated } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [featurePermissions, setFeaturePermissions] = useState<FeaturePermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('accounts');
   
   // Dialog states
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [saving, setSaving] = useState(false);
   
   // Form states
   const [formUsername, setFormUsername] = useState('');
   const [formPassword, setFormPassword] = useState('');
+  const [formNewPassword, setFormNewPassword] = useState('');
+  const [formConfirmPassword, setFormConfirmPassword] = useState('');
   const [formDisplayName, setFormDisplayName] = useState('');
   const [formRole, setFormRole] = useState<AppRole>('viewer');
   const [formIsActive, setFormIsActive] = useState(true);
@@ -69,6 +96,7 @@ const UserManagementPage = () => {
   useEffect(() => {
     if (isAuthenticated) {
       fetchAccounts();
+      fetchFeaturePermissions();
     }
   }, [isAuthenticated]);
 
@@ -90,9 +118,25 @@ const UserManagementPage = () => {
     }
   };
 
+  const fetchFeaturePermissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('feature_permissions')
+        .select('*')
+        .order('feature_key', { ascending: true });
+
+      if (error) throw error;
+      setFeaturePermissions(data || []);
+    } catch (error) {
+      console.error('Error fetching feature permissions:', error);
+    }
+  };
+
   const resetForm = () => {
     setFormUsername('');
     setFormPassword('');
+    setFormNewPassword('');
+    setFormConfirmPassword('');
     setFormDisplayName('');
     setFormRole('viewer');
     setFormIsActive(true);
@@ -147,11 +191,6 @@ const UserManagementPage = () => {
         is_active: formIsActive,
       };
 
-      // Only update password if provided
-      if (formPassword.trim()) {
-        updateData.password_hash = formPassword;
-      }
-
       const { error } = await supabase
         .from('accounts')
         .update(updateData)
@@ -167,6 +206,45 @@ const UserManagementPage = () => {
     } catch (error) {
       console.error('Error updating account:', error);
       toast.error('更新帳號失敗');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!selectedAccount) return;
+
+    if (!formNewPassword.trim()) {
+      toast.error('請輸入新密碼');
+      return;
+    }
+
+    if (formNewPassword !== formConfirmPassword) {
+      toast.error('兩次密碼輸入不一致');
+      return;
+    }
+
+    if (formNewPassword.length < 4) {
+      toast.error('密碼長度至少需要 4 個字元');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .update({ password_hash: formNewPassword })
+        .eq('id', selectedAccount.id);
+
+      if (error) throw error;
+
+      toast.success('密碼變更成功');
+      setShowPasswordDialog(false);
+      resetForm();
+      setSelectedAccount(null);
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error('密碼變更失敗');
     } finally {
       setSaving(false);
     }
@@ -196,6 +274,52 @@ const UserManagementPage = () => {
     }
   };
 
+  const handleToggleFeaturePermission = async (featureKey: string, role: AppRole, currentEnabled: boolean) => {
+    if (!isAdmin) {
+      toast.error('只有管理員可以修改功能權限');
+      return;
+    }
+
+    try {
+      const existingPermission = featurePermissions.find(
+        fp => fp.feature_key === featureKey && fp.role === role
+      );
+
+      if (existingPermission) {
+        const { error } = await supabase
+          .from('feature_permissions')
+          .update({ enabled: !currentEnabled })
+          .eq('id', existingPermission.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('feature_permissions')
+          .insert({
+            feature_key: featureKey,
+            role: role,
+            enabled: true,
+          });
+
+        if (error) throw error;
+      }
+
+      toast.success('權限已更新');
+      fetchFeaturePermissions();
+    } catch (error) {
+      console.error('Error updating feature permission:', error);
+      toast.error('更新權限失敗');
+    }
+  };
+
+  const getFeaturePermission = (featureKey: string, role: AppRole): boolean => {
+    if (role === 'admin') return true;
+    const permission = featurePermissions.find(
+      fp => fp.feature_key === featureKey && fp.role === role
+    );
+    return permission?.enabled ?? false;
+  };
+
   const openEditDialog = (account: Account) => {
     setSelectedAccount(account);
     setFormDisplayName(account.display_name || '');
@@ -203,6 +327,13 @@ const UserManagementPage = () => {
     setFormIsActive(account.is_active);
     setFormPassword('');
     setShowEditDialog(true);
+  };
+
+  const openPasswordDialog = (account: Account) => {
+    setSelectedAccount(account);
+    setFormNewPassword('');
+    setFormConfirmPassword('');
+    setShowPasswordDialog(true);
   };
 
   const openDeleteDialog = (account: Account) => {
@@ -236,207 +367,386 @@ const UserManagementPage = () => {
             權限管理
           </h1>
           <p className="text-muted-foreground mt-1">
-            管理使用者帳號與權限設定
+            管理使用者帳號、角色設定與功能權限
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={fetchAccounts} variant="outline" size="sm">
+          <Button onClick={() => { fetchAccounts(); fetchFeaturePermissions(); }} variant="outline" size="sm">
             <RefreshCw className="w-4 h-4 mr-2" />
             重新整理
           </Button>
-          {isAdmin && (
-            <Button onClick={() => { resetForm(); setShowAddDialog(true); }} size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              新增帳號
-            </Button>
-          )}
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <Users className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">總帳號數</p>
-                <p className="text-2xl font-bold">{accounts.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-destructive/10">
-                <Shield className="w-6 h-6 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">管理員</p>
-                <p className="text-2xl font-bold">
-                  {accounts.filter(a => a.role === 'admin').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-muted">
-                <UserCog className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">啟用中</p>
-                <p className="text-2xl font-bold">
-                  {accounts.filter(a => a.is_active).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="accounts" className="gap-2">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">帳號管理</span>
+            <span className="sm:hidden">帳號</span>
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="gap-2">
+            <UserCog className="w-4 h-4" />
+            <span className="hidden sm:inline">角色設定</span>
+            <span className="sm:hidden">角色</span>
+          </TabsTrigger>
+          <TabsTrigger value="features" className="gap-2">
+            <Settings2 className="w-4 h-4" />
+            <span className="hidden sm:inline">功能權限</span>
+            <span className="sm:hidden">功能</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Accounts Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>帳號列表</CardTitle>
-              <CardDescription>查看和管理所有使用者帳號</CardDescription>
-            </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="搜尋帳號..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        {/* Accounts Tab */}
+        <TabsContent value="accounts" className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-primary/10">
+                    <Users className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">總帳號數</p>
+                    <p className="text-2xl font-bold">{accounts.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-destructive/10">
+                    <Shield className="w-6 h-6 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">管理員</p>
+                    <p className="text-2xl font-bold">
+                      {accounts.filter(a => a.role === 'admin').length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-lg bg-muted">
+                    <UserCog className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">啟用中</p>
+                    <p className="text-2xl font-bold">
+                      {accounts.filter(a => a.is_active).length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : filteredAccounts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              {searchQuery ? '找不到符合的帳號' : '目前沒有帳號'}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>帳號</TableHead>
-                    <TableHead>顯示名稱</TableHead>
-                    <TableHead>權限</TableHead>
-                    <TableHead>狀態</TableHead>
-                    <TableHead>建立時間</TableHead>
-                    {isAdmin && <TableHead className="text-right">操作</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAccounts.map((account) => (
-                    <TableRow key={account.id}>
-                      <TableCell className="font-medium font-mono">
-                        {account.username}
-                      </TableCell>
-                      <TableCell>
-                        {account.display_name || <span className="text-muted-foreground">-</span>}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={ROLE_COLORS[account.role]}>
-                          {ROLE_LABELS[account.role]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={account.is_active ? 'default' : 'secondary'}>
-                          {account.is_active ? '啟用' : '停用'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(account.created_at).toLocaleDateString('zh-TW')}
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(account)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openDeleteDialog(account)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
+
+          {/* Accounts Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle>帳號列表</CardTitle>
+                  <CardDescription>查看和管理所有使用者帳號</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="搜尋帳號..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  {isAdmin && (
+                    <Button onClick={() => { resetForm(); setShowAddDialog(true); }} size="sm">
+                      <Plus className="w-4 h-4 mr-2" />
+                      新增
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : filteredAccounts.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {searchQuery ? '找不到符合的帳號' : '目前沒有帳號'}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>帳號</TableHead>
+                        <TableHead>顯示名稱</TableHead>
+                        <TableHead>權限</TableHead>
+                        <TableHead>狀態</TableHead>
+                        <TableHead>建立時間</TableHead>
+                        {isAdmin && <TableHead className="text-right">操作</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAccounts.map((account) => (
+                        <TableRow key={account.id}>
+                          <TableCell className="font-medium font-mono">
+                            {account.username}
+                          </TableCell>
+                          <TableCell>
+                            {account.display_name || <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={ROLE_COLORS[account.role]}>
+                              {ROLE_LABELS[account.role]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={account.is_active ? 'default' : 'secondary'}>
+                              {account.is_active ? '啟用' : '停用'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(account.created_at).toLocaleDateString('zh-TW')}
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditDialog(account)}
+                                  title="編輯帳號"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openPasswordDialog(account)}
+                                  title="變更密碼"
+                                >
+                                  <Key className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openDeleteDialog(account)}
+                                  className="text-destructive hover:text-destructive"
+                                  title="刪除帳號"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Roles Tab */}
+        <TabsContent value="roles" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>角色說明</CardTitle>
+              <CardDescription>各角色的權限範圍與功能限制</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg border border-destructive/20 bg-destructive/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className={ROLE_COLORS.admin}>管理員</Badge>
+                    <span className="text-xs text-muted-foreground">Admin</span>
+                  </div>
+                  <ul className="text-sm space-y-2 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      完整系統存取權限
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      管理使用者帳號與權限
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      設定系統組態
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      檢視所有資料與報表
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      新增/修改/刪除設備
+                    </li>
+                  </ul>
+                </div>
+                <div className="p-4 rounded-lg border border-primary/20 bg-primary/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className={ROLE_COLORS.operator}>操作員</Badge>
+                    <span className="text-xs text-muted-foreground">Operator</span>
+                  </div>
+                  <ul className="text-sm space-y-2 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      設備監控與操作
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      警報處理與確認
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      檢視報表資料
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">✗</span>
+                      無法管理使用者
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">✗</span>
+                      無法修改系統設定
+                    </li>
+                  </ul>
+                </div>
+                <div className="p-4 rounded-lg border border-muted bg-muted/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className={ROLE_COLORS.viewer}>檢視者</Badge>
+                    <span className="text-xs text-muted-foreground">Viewer</span>
+                  </div>
+                  <ul className="text-sm space-y-2 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      唯讀存取權限
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      檢視儀表板
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-success mt-0.5">✓</span>
+                      檢視設備狀態
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">✗</span>
+                      無法進行任何修改
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">✗</span>
+                      無法處理警報
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Role Statistics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>角色分佈</CardTitle>
+              <CardDescription>各角色的使用者數量統計</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {ROLES.map(role => {
+                  const count = accounts.filter(a => a.role === role).length;
+                  const percentage = accounts.length > 0 ? (count / accounts.length) * 100 : 0;
+                  return (
+                    <div key={role} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge className={ROLE_COLORS[role]}>{ROLE_LABELS[role]}</Badge>
+                          <span className="text-sm text-muted-foreground">{count} 位使用者</span>
+                        </div>
+                        <span className="text-sm font-medium">{percentage.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full transition-all ${
+                            role === 'admin' ? 'bg-destructive' : 
+                            role === 'operator' ? 'bg-primary' : 'bg-muted-foreground'
+                          }`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Features Tab */}
+        <TabsContent value="features" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>功能權限設定</CardTitle>
+              <CardDescription>
+                設定各角色可存取的功能模組。管理員預設擁有所有權限。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[150px]">功能模組</TableHead>
+                      {ROLES.map(role => (
+                        <TableHead key={role} className="text-center min-w-[100px]">
+                          <Badge className={ROLE_COLORS[role]}>{ROLE_LABELS[role]}</Badge>
+                        </TableHead>
+                      ))}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Role Permissions Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>權限說明</CardTitle>
-          <CardDescription>各角色的權限範圍</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg border border-destructive/20 bg-destructive/5">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge className={ROLE_COLORS.admin}>管理員</Badge>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(FEATURE_LABELS).map(([featureKey, featureLabel]) => (
+                      <TableRow key={featureKey}>
+                        <TableCell className="font-medium">{featureLabel}</TableCell>
+                        {ROLES.map(role => {
+                          const enabled = getFeaturePermission(featureKey, role);
+                          const isAdminRole = role === 'admin';
+                          return (
+                            <TableCell key={role} className="text-center">
+                              <Switch
+                                checked={enabled}
+                                onCheckedChange={() => handleToggleFeaturePermission(featureKey, role, enabled)}
+                                disabled={isAdminRole || !isAdmin}
+                              />
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-              <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>• 完整系統存取權限</li>
-                <li>• 管理使用者帳號與權限</li>
-                <li>• 設定系統組態</li>
-                <li>• 檢視所有資料與報表</li>
-              </ul>
-            </div>
-            <div className="p-4 rounded-lg border border-primary/20 bg-primary/5">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge className={ROLE_COLORS.operator}>操作員</Badge>
-              </div>
-              <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>• 設備監控與操作</li>
-                <li>• 警報處理與確認</li>
-                <li>• 檢視報表資料</li>
-                <li>• 無法管理使用者</li>
-              </ul>
-            </div>
-            <div className="p-4 rounded-lg border border-muted bg-muted/50">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge className={ROLE_COLORS.viewer}>檢視者</Badge>
-              </div>
-              <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>• 唯讀存取權限</li>
-                <li>• 檢視儀表板</li>
-                <li>• 檢視設備狀態</li>
-                <li>• 無法進行任何修改</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              {!isAdmin && (
+                <div className="mt-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  只有管理員可以修改功能權限設定
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Add Account Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -526,26 +836,6 @@ const UserManagementPage = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-password">新密碼（留空保持不變）</Label>
-              <div className="relative">
-                <Input
-                  id="edit-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formPassword}
-                  onChange={(e) => setFormPassword(e.target.value)}
-                  placeholder="輸入新密碼"
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="edit-display-name">顯示名稱</Label>
               <Input
                 id="edit-display-name"
@@ -580,6 +870,56 @@ const UserManagementPage = () => {
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>取消</Button>
             <Button onClick={handleEditAccount} disabled={saving}>
               {saving ? '儲存中...' : '儲存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>變更密碼</DialogTitle>
+            <DialogDescription>
+              為帳號 <span className="font-mono font-medium">{selectedAccount?.username}</span> 設定新密碼
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">新密碼 *</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formNewPassword}
+                  onChange={(e) => setFormNewPassword(e.target.value)}
+                  placeholder="請輸入新密碼"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">確認密碼 *</Label>
+              <Input
+                id="confirm-password"
+                type={showPassword ? 'text' : 'password'}
+                value={formConfirmPassword}
+                onChange={(e) => setFormConfirmPassword(e.target.value)}
+                placeholder="請再次輸入新密碼"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>取消</Button>
+            <Button onClick={handleChangePassword} disabled={saving}>
+              {saving ? '變更中...' : '確認變更'}
             </Button>
           </DialogFooter>
         </DialogContent>
