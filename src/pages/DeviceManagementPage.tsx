@@ -607,10 +607,6 @@ const DeviceManagementPage = () => {
                         <Video className="w-4 h-4 text-blue-500" />
                         <span>{deviceCameras.length}</span>
                       </div>
-                      {enabledAlarms > 0 && <Badge variant="outline" className="border-warning text-warning">
-                          <Bell className="w-3 h-3 mr-1" />
-                          {enabledAlarms}
-                        </Badge>}
                     </div>
 
                     {/* Actions */}
