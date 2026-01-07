@@ -1,26 +1,59 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
-    <link rel="preconnect" href="https://vzegudxhnzygkbrhgzoj.supabase.co" />
+    <!-- DNS Prefetch and Preconnect for faster API calls -->
+    <link rel="preconnect" href="https://vzegudxhnzygkbrhgzoj.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://vzegudxhnzygkbrhgzoj.supabase.co" />
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DGS-MAP GPS - 設備監控管理平台</title>
     <meta name="description" content="專業的GPS設備監控儀表板，即時追蹤設備位置、電量、訊號強度與即時畫面" />
-    <meta name="author" content="監控系統" />
+    <meta name="author" content="DIGISEC" />
+    
+    <!-- Performance hints -->
+    <meta http-equiv="x-dns-prefetch-control" content="on" />
+    
+    <!-- Preload critical fonts if any -->
+    <link rel="preload" href="/src/assets/logo-digisec.png" as="image" />
 
-    <meta property="og:title" content="21d30259-5564-4840-a74a-0eda28b6c801" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:title" content="DGS-MAP GPS - 設備監控管理平台" />
+    <meta property="og:description" content="專業的GPS設備監控儀表板，即時追蹤設備位置、電量、訊號強度與即時畫面" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Lovable" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    
+    <!-- Inline critical CSS for faster first paint -->
+    <style>
+      #root {
+        min-height: 100vh;
+      }
+      .loading-spinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        border: 3px solid #1a1a2e;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Initial loading spinner before React hydrates -->
+      <div class="loading-spinner"></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

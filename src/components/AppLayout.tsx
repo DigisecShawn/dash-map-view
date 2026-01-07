@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, MapPin, Monitor, Bell, History, Wifi, 
+  LayoutDashboard, MapPin, Monitor, Bell, Wifi, 
   Menu, X, ChevronLeft, TrendingUp, Building2, Shield, LogOut, Settings, ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useAuth } from '@/hooks/useAuth';
+import { useRoutePreload } from '@/hooks/useRoutePreload';
 import logoDigisec from '@/assets/logo-digisec.png';
 import logoIcon from '@/assets/logo-icon.png';
 import {
@@ -42,6 +43,7 @@ const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, role, isAdmin, signOut, loading, isAuthenticated } = useAuth();
+  const { preloadOnHover } = useRoutePreload();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -138,6 +140,7 @@ const AppLayout = () => {
                 key={item.href}
                 to={item.href}
                 onClick={() => setMobileMenuOpen(false)}
+                {...preloadOnHover(item.href)}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
                   active
