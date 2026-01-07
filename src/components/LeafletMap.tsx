@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -67,7 +67,7 @@ const createCustomIcon = (device: Device, isSelected: boolean) => {
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: ${isSelected ? `0 0 20px ${color}80` : `0 4px 12px rgba(0,0,0,0.3)`};
+      box-shadow: ${isSelected ? '0 0 20px ' + color + '80' : '0 4px 12px rgba(0,0,0,0.3)'};
       transition: all 0.3s ease;
       ${state === 'offline' ? 'filter: grayscale(0.5);' : ''}
     ">
@@ -82,7 +82,7 @@ const createCustomIcon = (device: Device, isSelected: boolean) => {
           right: -2px;
           width: 10px;
           height: 10px;
-          background: #ef4444;
+          background: #22c55e;
           border: 2px solid white;
           border-radius: 50%;
         "></div>
@@ -130,11 +130,11 @@ const createCustomIcon = (device: Device, isSelected: boolean) => {
   });
 };
 
-// Component to handle map view changes
-const MapController = ({ selectedDevice, devices }: { 
+// Separate component for map view control
+function MapViewController({ selectedDevice, devices }: { 
   selectedDevice: string | null; 
   devices: Device[];
-}) => {
+}) {
   const map = useMap();
 
   useEffect(() => {
@@ -146,32 +146,24 @@ const MapController = ({ selectedDevice, devices }: {
     }
   }, [selectedDevice, devices, map]);
 
-  return <></>;
-};
+  // Return null explicitly for react-leaflet v4
+  return null;
+}
 
-const LeafletMap = ({ 
+// Device markers component
+function DeviceMarkers({ 
   devices, 
-  selectedDevice, 
-  onDeviceSelect, 
-  onDeviceClick, 
-  onDeviceDoubleClick 
-}: LeafletMapProps) => {
-  const [config, setConfig] = useState<MapConfig>(defaultConfig);
-
-  useEffect(() => {
-    // Load config from localStorage
-    const saved = localStorage.getItem('map_config');
-    if (saved) {
-      const parsedConfig = JSON.parse(saved);
-      setConfig({
-        provider: parsedConfig.provider || defaultConfig.provider,
-        defaultZoom: parsedConfig.defaultZoom || defaultConfig.defaultZoom,
-        centerLat: parsedConfig.centerLat ?? defaultConfig.centerLat,
-        centerLng: parsedConfig.centerLng ?? defaultConfig.centerLng,
-      });
-    }
-  }, []);
-
+  selectedDevice,
+  onDeviceSelect,
+  onDeviceClick,
+  onDeviceDoubleClick
+}: {
+  devices: Device[];
+  selectedDevice: string | null;
+  onDeviceSelect: (id: string) => void;
+  onDeviceClick?: (id: string) => void;
+  onDeviceDoubleClick?: (id: string) => void;
+}) {
   const getStatusLabel = (device: Device) => {
     const state = getDeviceState(device);
     switch (state) {
@@ -193,9 +185,105 @@ const LeafletMap = ({
   };
 
   return (
+    <>
+      {devices.map((device) => (
+        <Marker
+          key={device.id}
+          position={[device.lat, device.lng]}
+          icon={createCustomIcon(device, selectedDevice === device.id)}
+          eventHandlers={{
+            click: () => {
+              onDeviceSelect(device.id);
+              onDeviceClick?.(device.id);
+            },
+            dblclick: () => {
+              onDeviceDoubleClick?.(device.id);
+            },
+          }}
+        >
+          <Popup>
+            <div className="min-w-[180px]">
+              <div className="flex items-center gap-2 mb-2">
+                <div 
+                  className="w-3 h-3 rounded-full" 
+                  style={{ background: getStatusColor(device) }}
+                />
+                <span className="font-semibold text-base">{device.name}</span>
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">狀態:</span>
+                  <span style={{ color: getStatusColor(device) }}>{getStatusLabel(device)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">電量:</span>
+                  <span>{device.battery}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">訊號:</span>
+                  <span>{device.signal}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">ID:</span>
+                  <span className="font-mono text-xs">{device.id}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => onDeviceDoubleClick?.(device.id)}
+                className="w-full mt-3 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                查看詳情
+              </button>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+    </>
+  );
+}
+
+const LeafletMap = ({ 
+  devices, 
+  selectedDevice, 
+  onDeviceSelect, 
+  onDeviceClick, 
+  onDeviceDoubleClick 
+}: LeafletMapProps) => {
+  const [config, setConfig] = useState<MapConfig>(defaultConfig);
+  const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('map_config');
+    if (saved) {
+      try {
+        const parsedConfig = JSON.parse(saved);
+        setConfig({
+          provider: parsedConfig.provider || defaultConfig.provider,
+          defaultZoom: parsedConfig.defaultZoom || defaultConfig.defaultZoom,
+          centerLat: parsedConfig.centerLat ?? defaultConfig.centerLat,
+          centerLng: parsedConfig.centerLng ?? defaultConfig.centerLng,
+        });
+      } catch (e) {
+        console.error('Error parsing map config:', e);
+      }
+    }
+    setMapReady(true);
+  }, []);
+
+  const center = useMemo<[number, number]>(() => [config.centerLat, config.centerLng], [config.centerLat, config.centerLng]);
+
+  if (!mapReady) {
+    return (
+      <div className="relative w-full h-full rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+        <span className="text-muted-foreground">載入地圖中...</span>
+      </div>
+    );
+  }
+
+  return (
     <div className="relative w-full h-full rounded-lg overflow-hidden leaflet-map-wrapper">
       <MapContainer
-        center={[config.centerLat, config.centerLng]}
+        center={center}
         zoom={config.defaultZoom}
         className="w-full h-full"
         zoomControl={true}
@@ -205,60 +293,14 @@ const LeafletMap = ({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapController selectedDevice={selectedDevice} devices={devices} />
-        
-        {devices.map((device) => (
-          <Marker
-            key={device.id}
-            position={[device.lat, device.lng]}
-            icon={createCustomIcon(device, selectedDevice === device.id)}
-            eventHandlers={{
-              click: () => {
-                onDeviceSelect(device.id);
-                onDeviceClick?.(device.id);
-              },
-              dblclick: () => {
-                onDeviceDoubleClick?.(device.id);
-              },
-            }}
-          >
-            <Popup>
-              <div className="min-w-[180px]">
-                <div className="flex items-center gap-2 mb-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ background: getStatusColor(device) }}
-                  />
-                  <span className="font-semibold text-base">{device.name}</span>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">狀態:</span>
-                    <span style={{ color: getStatusColor(device) }}>{getStatusLabel(device)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">電量:</span>
-                    <span>{device.battery}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">訊號:</span>
-                    <span>{device.signal}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">ID:</span>
-                    <span className="font-mono text-xs">{device.id}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => onDeviceDoubleClick?.(device.id)}
-                  className="w-full mt-3 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  查看詳情
-                </button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        <MapViewController selectedDevice={selectedDevice} devices={devices} />
+        <DeviceMarkers 
+          devices={devices}
+          selectedDevice={selectedDevice}
+          onDeviceSelect={onDeviceSelect}
+          onDeviceClick={onDeviceClick}
+          onDeviceDoubleClick={onDeviceDoubleClick}
+        />
       </MapContainer>
     </div>
   );
