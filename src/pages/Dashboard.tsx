@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Monitor, Wifi, WifiOff, AlertTriangle, Building2, MapPin, ChevronRight, Sun
 } from 'lucide-react';
@@ -7,15 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Skeleton } from '@/components/ui/skeleton';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 import { getAlertTypeIcon, getAlertTypeLabel, getAlertTypeSeverity, SEVERITY_CONFIG, type AlertSeverity } from '@/lib/alertTypeIcons';
 import { getStatusBadgeClass, getStatusLabel, type DeviceStatus } from '@/lib/statusUtils';
-
-// Lazy load chart component
-const SolarPowerChart = lazy(() => import('@/components/SolarPowerChart'));
 
 interface Device {
   id: string;
@@ -400,9 +397,50 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-              <SolarPowerChart data={solarChartData} />
-            </Suspense>
+            {solarChartData.length === 0 ? (
+              <div className="flex items-center justify-center h-48 text-muted-foreground">
+                <p>目前沒有太陽能發電數據</p>
+              </div>
+            ) : (
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={solarChartData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis 
+                      type="number" 
+                      unit=" kW" 
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
+                    <YAxis 
+                      type="category" 
+                      dataKey="name" 
+                      width={70}
+                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [`${value} kW`, '發電量']}
+                      labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <Bar dataKey="power" radius={[0, 4, 4, 0]}>
+                      {solarChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={`hsl(${45 - index * 8}, 90%, ${55 + index * 3}%)`}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
             
             {/* Summary Stats */}
             <div className="mt-3 grid grid-cols-3 gap-2">
