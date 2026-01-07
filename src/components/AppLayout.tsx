@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, MapPin, Monitor, Bell, History, Wifi, 
-  Menu, X, ChevronLeft, TrendingUp, Building2, Shield, LogOut
+  Menu, X, ChevronLeft, TrendingUp, Building2, Shield, LogOut, Settings, ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,12 +30,12 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: '儀表板', href: '/', icon: LayoutDashboard },
   { title: '趨勢分析', href: '/trends', icon: TrendingUp },
-  { title: '電子地圖', href: '/map', icon: MapPin },
   { title: '組織管理', href: '/organizations', icon: Building2 },
   { title: '設備管理', href: '/devices', icon: Monitor },
   { title: '通知設定', href: '/notifications', icon: Bell },
   { title: '警報歷史', href: '/alarm-history', icon: History },
   { title: 'WebSocket 轉發', href: '/websocket', icon: Wifi },
+  { title: '電子地圖設定', href: '/map-settings', icon: Settings },
   { title: '權限管理', href: '/users', icon: Shield, adminOnly: true },
 ];
 
@@ -211,6 +211,18 @@ const AppLayout = () => {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Desktop top bar with map link */}
+        <header className="hidden lg:flex sticky top-0 z-30 h-12 bg-card border-b border-border items-center justify-end px-4 gap-3">
+          <Link
+            to="/map"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium text-sm"
+          >
+            <MapPin className="w-4 h-4" />
+            前往電子地圖
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
+        </header>
+
         {/* Mobile header */}
         <header className="lg:hidden sticky top-0 z-30 h-14 bg-card border-b border-border flex items-center px-4 gap-3">
           <Button
@@ -224,6 +236,13 @@ const AppLayout = () => {
             <img src={logoDigisec} alt="DIGISEC" className="h-7 w-auto" />
           </Link>
           <div className="ml-auto flex items-center gap-2">
+            <Link
+              to="/map"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium text-xs"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              地圖
+            </Link>
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

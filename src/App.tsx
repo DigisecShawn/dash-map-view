@@ -17,6 +17,7 @@ const DeviceManagementPage = lazy(() => import("./pages/DeviceManagementPage"));
 const NotificationSettingsPage = lazy(() => import("./pages/NotificationSettingsPage"));
 const AlarmHistory = lazy(() => import("./pages/AlarmHistory"));
 const WebSocketSettings = lazy(() => import("./pages/WebSocketSettings"));
+const MapSettingsPage = lazy(() => import("./pages/MapSettingsPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const UserManagementPage = lazy(() => import("./pages/UserManagementPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -53,6 +54,7 @@ const App = () => (
                 <Route path="/notifications" element={<NotificationSettingsPage />} />
                 <Route path="/alarm-history" element={<AlarmHistory />} />
                 <Route path="/websocket" element={<WebSocketSettings />} />
+                <Route path="/map-settings" element={<MapSettingsPage />} />
                 <Route path="/users" element={<UserManagementPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
