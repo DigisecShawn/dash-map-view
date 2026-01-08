@@ -1,8 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Search, Menu } from 'lucide-react';
-import LeafletMap from '@/components/LeafletMap';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import { Search, Menu, Loader2 } from 'lucide-react';
 import DeviceCard from '@/components/DeviceCard';
-import DeviceDetails from '@/components/DeviceDetails';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -13,6 +11,20 @@ import cctvXinzhuang from '@/assets/cctv-xinzhuang.jpg';
 import cctvBanqiao from '@/assets/cctv-banqiao.jpg';
 import cctvXindian from '@/assets/cctv-xindian.jpg';
 import cctvSongshan from '@/assets/cctv-songshan.jpg';
+
+// Lazy load heavy components
+const LeafletMap = lazy(() => import('@/components/LeafletMap'));
+const DeviceDetails = lazy(() => import('@/components/DeviceDetails'));
+
+// Map loading skeleton
+const MapSkeleton = () => (
+  <div className="w-full h-full bg-muted/50 flex items-center justify-center">
+    <div className="flex flex-col items-center gap-3 text-muted-foreground">
+      <Loader2 className="w-8 h-8 animate-spin" />
+      <span className="text-sm">載入地圖中...</span>
+    </div>
+  </div>
+);
 
 const cctvImages: Record<string, string> = {
   'DEV-001': cctvNeihu,
@@ -175,19 +187,23 @@ const MapPage = () => {
 
       {/* Map area */}
       <main className="flex-1 relative h-full overflow-hidden">
-        <LeafletMap
-          devices={devices}
-          selectedDevice={selectedDevice}
-          onDeviceSelect={handleDeviceSelect}
-          onDeviceClick={handleDeviceClick}
-          onDeviceDoubleClick={handleDeviceDoubleClick}
-        />
+        <Suspense fallback={<MapSkeleton />}>
+          <LeafletMap
+            devices={devices}
+            selectedDevice={selectedDevice}
+            onDeviceSelect={handleDeviceSelect}
+            onDeviceClick={handleDeviceClick}
+            onDeviceDoubleClick={handleDeviceDoubleClick}
+          />
+        </Suspense>
 
         {showDetails && (
-          <DeviceDetails
-            device={selectedDeviceData}
-            onClose={() => setShowDetails(false)}
-          />
+          <Suspense fallback={null}>
+            <DeviceDetails
+              device={selectedDeviceData}
+              onClose={() => setShowDetails(false)}
+            />
+          </Suspense>
         )}
       </main>
 
