@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import logoIconTransparent from '@/assets/logo-icon-transparent.png';
 
-const AuthPage = memo(() => {
+const AuthPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -158,8 +158,6 @@ const AuthPage = memo(() => {
       </div>
     </main>
   );
-});
-
-AuthPage.displayName = 'AuthPage';
+};
 
 export default AuthPage;

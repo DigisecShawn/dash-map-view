@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardDescription } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
-const MapLoginPage = memo(() => {
+const MapLoginPage = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -136,8 +136,6 @@ const MapLoginPage = memo(() => {
       </div>
     </div>
   );
-});
-
-MapLoginPage.displayName = 'MapLoginPage';
+};
 
 export default MapLoginPage;
