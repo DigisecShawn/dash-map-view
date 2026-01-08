@@ -83,11 +83,16 @@ const Dashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [devicesRes, sensorRes, thresholdsRes, wsAlertsRes] = await Promise.all([supabase.from('devices').select('*'), supabase.from('device_sensor_history').select('*').gte('recorded_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()).order('recorded_at', {
-        ascending: true
-      }), supabase.from('device_alarm_thresholds').select('*').eq('enabled', true), supabase.from('websocket_alerts').select('*').eq('acknowledged', false).order('created_at', {
-        ascending: false
-      }).limit(20)]);
+      const [devicesRes, sensorRes, thresholdsRes, wsAlertsRes] = await Promise.all([
+        supabase.from('devices').select('id,device_id,name,status,battery,signal_strength,location,company_id,site_id,current_solar_power'),
+        supabase.from('device_sensor_history')
+          .select('device_id,temperature,humidity,pm25,pm10,noise,recorded_at')
+          .gte('recorded_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()) // 只取最近2小時
+          .order('recorded_at', { ascending: false })
+          .limit(200), // 限制數據量
+        supabase.from('device_alarm_thresholds').select('device_id,metric_type,threshold_value,enabled').eq('enabled', true),
+        supabase.from('websocket_alerts').select('id,alert_type,message,device_id,device_name,severity,acknowledged,created_at').eq('acknowledged', false).order('created_at', { ascending: false }).limit(20)
+      ]);
       if (devicesRes.data) setDevices(devicesRes.data);
       if (sensorRes.data) setSensorData(sensorRes.data);
       if (thresholdsRes.data) setThresholds(thresholdsRes.data);
