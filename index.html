@@ -16,8 +16,13 @@
     <!-- Performance hints -->
     <meta http-equiv="x-dns-prefetch-control" content="on" />
     
-    <!-- Preload critical fonts if any -->
-    <link rel="preload" href="/src/assets/logo-digisec.png" as="image" />
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/src/assets/logo-digisec.png" as="image" type="image/png" />
+    <link rel="preload" href="/src/main.tsx" as="script" crossorigin />
+    
+    <!-- Prefetch secondary resources for faster navigation -->
+    <link rel="prefetch" href="/src/assets/logo-light.png" as="image" type="image/png" />
+    <link rel="prefetch" href="/src/assets/logo-dark.png" as="image" type="image/png" />
 
     <meta property="og:title" content="DGS-MAP GPS - 設備監控管理平台" />
     <meta property="og:description" content="專業的GPS設備監控儀表板，即時追蹤設備位置、電量、訊號強度與即時畫面" />
