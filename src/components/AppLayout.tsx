@@ -13,6 +13,7 @@ import { useTheme } from 'next-themes';
 import logoLight from '@/assets/logo-light.png';
 import logoDark from '@/assets/logo-dark.png';
 import logoIconOrange from '@/assets/logo-icon-orange.png';
+import PageTransition from '@/components/PageTransition';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -275,7 +276,9 @@ const AppLayout = () => {
 
         {/* Page content */}
         <main className="flex-1 overflow-auto">
-          <Outlet />
+          <PageTransition key={location.pathname}>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
     </div>
