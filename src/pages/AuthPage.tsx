@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import logoIconTransparent from '@/assets/logo-icon-transparent.png';
-const AuthPage = () => {
+
+const AuthPage = memo(() => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -53,20 +54,23 @@ const AuthPage = () => {
   };
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -right-1/4 w-[800px] h-[800px] rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-1/2 -left-1/4 w-[600px] h-[600px] rounded-full bg-primary/3 blur-3xl" />
+      {/* Simplified background - reduced blur for better performance */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div className="absolute -top-1/2 -right-1/4 w-[600px] h-[600px] rounded-full bg-primary/5 blur-2xl" />
+        <div className="absolute -bottom-1/2 -left-1/4 w-[500px] h-[500px] rounded-full bg-primary/3 blur-2xl" />
       </div>
 
       <div className="w-full max-w-[420px] relative z-10">
         {/* Logo Section */}
         <div className="flex flex-col items-center mb-8">
-          <div className="mb-4 w-24 h-24 flex items-center justify-center drop-shadow-lg">
+          <div className="mb-4 w-24 h-24 flex items-center justify-center">
             <img 
               alt="DIGISEC" 
               className="w-20 h-20 object-contain" 
-              src={logoIconTransparent} 
+              src={logoIconTransparent}
+              width={80}
+              height={80}
+              loading="eager"
             />
           </div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent tracking-tight">
@@ -154,6 +158,8 @@ const AuthPage = () => {
       </div>
     </main>
   );
-};
+});
+
+AuthPage.displayName = 'AuthPage';
 
 export default AuthPage;

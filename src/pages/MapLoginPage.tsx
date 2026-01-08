@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardDescription } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
-const MapLoginPage = () => {
+const MapLoginPage = memo(() => {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -45,11 +45,11 @@ const MapLoginPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg mb-4">
-            <MapPin className="w-8 h-8 text-white" />
+            <MapPin className="w-8 h-8 text-white" aria-hidden="true" />
           </div>
           <h1 className="text-2xl font-bold">電子地圖系統</h1>
           <p className="text-sm text-muted-foreground">請登入以查看即時設備監控地圖</p>
@@ -136,6 +136,8 @@ const MapLoginPage = () => {
       </div>
     </div>
   );
-};
+});
+
+MapLoginPage.displayName = 'MapLoginPage';
 
 export default MapLoginPage;
