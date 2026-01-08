@@ -11,6 +11,7 @@ import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 import { toast } from 'sonner';
 import { ALERT_TYPE_CONFIG, getAlertTypeLabel } from '@/lib/alertTypeIcons';
+import TrendAnalysisSkeleton from '@/components/TrendAnalysisSkeleton';
 
 interface SensorData {
   device_id: string;
@@ -498,9 +499,7 @@ const TrendAnalysisPage = () => {
     toast.success(`已匯出 ${filteredSensorData.length} 筆感測器數據和 ${filteredWsAlerts.length} 筆警報記錄`);
   }, [filteredSensorData, filteredWsAlerts]);
   if (loading || filterLoading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </div>;
+    return <TrendAnalysisSkeleton />;
   }
   return <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
