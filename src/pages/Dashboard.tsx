@@ -10,6 +10,7 @@ import CompanySiteFilter from '@/components/CompanySiteFilter';
 import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 import { getAlertTypeIcon, getAlertTypeLabel, getAlertTypeSeverity, SEVERITY_CONFIG, type AlertSeverity } from '@/lib/alertTypeIcons';
 import { getStatusBadgeClass, getStatusLabel, type DeviceStatus } from '@/lib/statusUtils';
+import DashboardSkeleton from '@/components/DashboardSkeleton';
 interface Device {
   id: string;
   device_id: string;
@@ -265,9 +266,7 @@ const Dashboard = () => {
     });
   };
   if (loading || filterLoading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </div>;
+    return <DashboardSkeleton />;
   }
   return <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
