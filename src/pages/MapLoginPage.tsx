@@ -30,17 +30,16 @@ const MapLoginPage = () => {
 
     setLoading(true);
 
-    // Simulate login delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // Quick validation - reduced delay
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     if (username === DEMO_CREDENTIALS.username && password === DEMO_CREDENTIALS.password) {
       toast.success('登入成功');
       navigate('/map');
     } else {
       toast.error('帳號或密碼錯誤');
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
