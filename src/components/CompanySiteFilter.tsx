@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Building2, MapPin } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Company, Site } from '@/hooks/useCompanySiteFilter';
@@ -13,7 +14,7 @@ interface CompanySiteFilterProps {
   compact?: boolean;
 }
 
-const CompanySiteFilter = ({
+const CompanySiteFilter = memo(({
   companies,
   filteredSites,
   selectedCompanyId,
@@ -74,6 +75,8 @@ const CompanySiteFilter = ({
       </div>
     </div>
   );
-};
+});
+
+CompanySiteFilter.displayName = 'CompanySiteFilter';
 
 export default CompanySiteFilter;

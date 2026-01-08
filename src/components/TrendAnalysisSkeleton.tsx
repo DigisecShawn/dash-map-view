@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const TrendAnalysisSkeleton = () => {
+const TrendAnalysisSkeleton = memo(() => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -169,6 +170,8 @@ const TrendAnalysisSkeleton = () => {
       </div>
     </div>
   );
-};
+});
+
+TrendAnalysisSkeleton.displayName = 'TrendAnalysisSkeleton';
 
 export default TrendAnalysisSkeleton;

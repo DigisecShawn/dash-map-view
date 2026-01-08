@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Company {
@@ -28,35 +29,45 @@ export interface UseCompanySiteFilterResult {
   getSiteName: (siteId: string | null) => string;
 }
 
+// Shared query functions with caching
+const fetchCompanies = async (): Promise<Company[]> => {
+  const { data, error } = await supabase
+    .from('companies')
+    .select('id,name,description')
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+const fetchSites = async (): Promise<Site[]> => {
+  const { data, error } = await supabase
+    .from('sites')
+    .select('id,company_id,name,address,description')
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
 export const useCompanySiteFilter = (): UseCompanySiteFilterResult => {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [sites, setSites] = useState<Site[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all');
   const [selectedSiteId, setSelectedSiteId] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
+  // Use React Query for caching - data shared across all components
+  const { data: companies = [], isLoading: companiesLoading } = useQuery({
+    queryKey: ['companies'],
+    queryFn: fetchCompanies,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+  });
 
-    const companiesChannel = supabase
-      .channel('filter-companies-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => {
-        fetchCompanies();
-      })
-      .subscribe();
+  const { data: sites = [], isLoading: sitesLoading } = useQuery({
+    queryKey: ['sites'],
+    queryFn: fetchSites,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
 
-    const sitesChannel = supabase
-      .channel('filter-sites-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sites' }, () => {
-        fetchSites();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(companiesChannel);
-      supabase.removeChannel(sitesChannel);
-    };
-  }, []);
+  const loading = companiesLoading || sitesLoading;
 
   // Reset site selection when company changes
   useEffect(() => {
@@ -64,40 +75,6 @@ export const useCompanySiteFilter = (): UseCompanySiteFilterResult => {
       setSelectedSiteId('all');
     }
   }, [selectedCompanyId]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    await Promise.all([fetchCompanies(), fetchSites()]);
-    setLoading(false);
-  };
-
-  const fetchCompanies = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setCompanies(data || []);
-    } catch (error) {
-      console.error('Error fetching companies:', error);
-    }
-  };
-
-  const fetchSites = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('sites')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setSites(data || []);
-    } catch (error) {
-      console.error('Error fetching sites:', error);
-    }
-  };
 
   const filteredSites = useMemo(() => {
     if (selectedCompanyId === 'all') return sites;
