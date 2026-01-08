@@ -36,7 +36,7 @@ const navItems: NavItem[] = [
   { title: '組織管理', href: '/organizations', icon: Building2 },
   { title: '設備管理', href: '/devices', icon: Monitor },
   { title: '通知設定', href: '/notifications', icon: Bell },
-  { title: 'WebSocket 轉發', href: '/websocket', icon: Wifi },
+  { title: '事件轉發設定', href: '/websocket', icon: Wifi },
   { title: '權限管理', href: '/users', icon: Shield, adminOnly: true },
   { title: '電子地圖設定', href: '/map-settings', icon: Settings },
 ];
