@@ -7,11 +7,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/AppLayout";
 
-// Critical auth pages - load immediately (no lazy)
-import AuthPage from "./pages/AuthPage";
-import MapLoginPage from "./pages/MapLoginPage";
-
-// Lazy load other pages for code splitting
+// Lazy load all pages for code splitting
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const MapLoginPage = lazy(() => import("./pages/MapLoginPage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const TrendAnalysisPage = lazy(() => import("./pages/TrendAnalysisPage"));
 const MapPage = lazy(() => import("./pages/MapPage"));
