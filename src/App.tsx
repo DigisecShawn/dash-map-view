@@ -5,9 +5,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import AppLayout from "@/components/AppLayout";
-
-// Lazy load all pages for code splitting
+// Lazy load layout and all pages for code splitting
+const AppLayout = lazy(() => import("@/components/AppLayout"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const MapLoginPage = lazy(() => import("./pages/MapLoginPage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
