@@ -169,23 +169,34 @@ const DecisionAnalyticsDashboard = ({
           const threshold = COMPLIANCE_THRESHOLDS[key as keyof typeof COMPLIANCE_THRESHOLDS];
           const isGood = data.rate >= 90;
           const isWarning = data.rate >= 70 && data.rate < 90;
+          const isCritical = data.rate >= 50 && data.rate < 70;
+          
+          // Determine progress bar variant based on compliance rate
+          const getProgressVariant = () => {
+            if (data.rate >= 90) return 'success';
+            if (data.rate >= 70) return 'warning';
+            if (data.rate >= 50) return 'critical';
+            return 'emergency';
+          };
           
           return (
             <Card key={key} className="border-l-4" style={{
               borderLeftColor: isGood ? 'hsl(142, 71%, 45%)' : 
                               isWarning ? 'hsl(45, 93%, 47%)' : 
+                              isCritical ? 'hsl(24, 95%, 53%)' :
                               'hsl(var(--destructive))',
             }}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">{threshold.name}</span>
                   <Badge variant={isGood ? 'outline' : isWarning ? 'secondary' : 'destructive'} className="text-xs">
-                    {isGood ? '合規' : isWarning ? '注意' : '超標'}
+                    {isGood ? '合規' : isWarning ? '警告' : isCritical ? '嚴重' : '緊急'}
                   </Badge>
                 </div>
                 <div className="text-3xl font-bold mb-1">{data.rate}%</div>
                 <Progress 
                   value={data.rate} 
+                  variant={getProgressVariant()}
                   className="h-2 mb-2"
                 />
                 <div className="text-xs text-muted-foreground space-y-0.5">
