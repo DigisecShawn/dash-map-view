@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Target, CheckCircle2, XCircle, Timer, Gauge, Activity, Zap, AlertTriangle } from 'lucide-react';
-import { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface ComplianceData {
   total: number;
@@ -27,15 +26,6 @@ interface AnomalyData {
   trend: string;
 }
 
-interface HourlyHeatmapData {
-  hour: string;
-  hourNum: number;
-  warning: number;
-  error: number;
-  critical: number;
-  total: number;
-}
-
 interface DecisionAnalyticsDashboardProps {
   complianceAnalysis: {
     pm25: ComplianceData;
@@ -45,29 +35,22 @@ interface DecisionAnalyticsDashboardProps {
   };
   alertEfficiencyKPI: AlertEfficiencyKPI;
   anomalyData: AnomalyData;
-  hourlyHeatmapData: HourlyHeatmapData[];
   isUsingMockData: boolean;
   isUsingMockAlerts: boolean;
 }
 
 const COMPLIANCE_THRESHOLDS = {
-  pm25: { limit: 35, unit: 'µg/m³', name: 'PM2.5' },
-  pm10: { limit: 125, unit: 'µg/m³', name: 'PM10' },
-  noise: { limit: 70, unit: 'dB', name: '噪音' },
+  pm25: { warning: 25, critical: 35, emergency: 55, unit: 'µg/m³', name: 'PM2.5' },
+  pm10: { warning: 100, critical: 125, emergency: 200, unit: 'µg/m³', name: 'PM10' },
+  noise: { warning: 60, critical: 65, emergency: 70, unit: 'dB', name: '噪音（日間住宅）' },
   temperature: { min: 15, max: 35, unit: '°C', name: '溫度' },
 };
 
-const SEVERITY_COLORS: Record<string, string> = {
-  'warning': '#facc15',
-  'error': '#f97316',
-  'critical': '#ef4444',
-};
 
 const DecisionAnalyticsDashboard = ({
   complianceAnalysis,
   alertEfficiencyKPI,
   anomalyData,
-  hourlyHeatmapData,
   isUsingMockData,
   isUsingMockAlerts,
 }: DecisionAnalyticsDashboardProps) => {
@@ -206,7 +189,11 @@ const DecisionAnalyticsDashboard = ({
                   className="h-2 mb-2"
                 />
                 <div className="text-xs text-muted-foreground space-y-0.5">
-                  <div>標準: {'limit' in threshold ? `≤${threshold.limit}` : `${threshold.min}-${threshold.max}`} {threshold.unit}</div>
+                  <div>
+                    {'warning' in threshold 
+                      ? `警告: ${threshold.warning}, 嚴重: ${threshold.critical}, 緊急: >${threshold.emergency}` 
+                      : `${threshold.min}-${threshold.max}`} {threshold.unit}
+                  </div>
                   <div>超標: {data.exceeded}/{data.total} 次</div>
                   {data.avgExcess > 0 && <div className="text-destructive">平均超標: +{data.avgExcess} {threshold.unit}</div>}
                 </div>
@@ -216,64 +203,8 @@ const DecisionAnalyticsDashboard = ({
         })}
       </div>
 
-      {/* Hourly Heatmap & Anomaly Detection Row */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Hourly Alert Heatmap */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              每小時警報熱區
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={hourlyHeatmapData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="hour" 
-                    tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
-                    interval={2}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number, name: string) => {
-                      const labels: Record<string, string> = {
-                        warning: '警告',
-                        error: '嚴重',
-                        critical: '緊急',
-                        total: '總計',
-                      };
-                      return [`${value} 次`, labels[name] || name];
-                    }}
-                  />
-                  <Legend 
-                    formatter={(value) => {
-                      const labels: Record<string, string> = {
-                        warning: '警告',
-                        error: '嚴重',
-                        critical: '緊急',
-                      };
-                      return labels[value] || value;
-                    }}
-                  />
-                  <Bar dataKey="warning" stackId="a" fill={SEVERITY_COLORS.warning} name="warning" />
-                  <Bar dataKey="error" stackId="a" fill={SEVERITY_COLORS.error} name="error" />
-                  <Bar dataKey="critical" stackId="a" fill={SEVERITY_COLORS.critical} name="critical" radius={[4, 4, 0, 0]} />
-                  <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="total" />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Anomaly Detection - Full Width */}
+      <div className="grid gap-6">
 
         {/* Anomaly Detection */}
         <Card>
