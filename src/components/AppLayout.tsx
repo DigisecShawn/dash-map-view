@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, MapPin, Monitor, Bell, Wifi, 
-  Menu, X, ChevronLeft, TrendingUp, Building2, Shield, LogOut, Settings, ExternalLink
+  Menu, X, ChevronLeft, ChevronDown, TrendingUp, Building2, Shield, LogOut, Settings, ExternalLink, ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -23,17 +23,31 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
+  children?: { title: string; href: string; icon: React.ComponentType<{ className?: string }> }[];
 }
 
 const navItems: NavItem[] = [
   { title: '儀表板', href: '/', icon: LayoutDashboard },
-  { title: '趨勢分析', href: '/trends', icon: TrendingUp },
+  { 
+    title: '趨勢分析', 
+    href: '/trends', 
+    icon: TrendingUp,
+    children: [
+      { title: '環境趨勢分析', href: '/trends/environmental', icon: TrendingUp },
+      { title: 'AI 偵測警報分析', href: '/trends/alerts', icon: ShieldAlert },
+    ],
+  },
   { title: '組織管理', href: '/organizations', icon: Building2 },
   { title: '設備管理', href: '/devices', icon: Monitor },
   { title: '通知設定', href: '/notifications', icon: Bell },
@@ -50,6 +64,7 @@ const AppLayout = () => {
   const { resolvedTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [trendsOpen, setTrendsOpen] = useState(false);
 
   const currentLogo = resolvedTheme === 'dark' ? logoDark : logoLight;
 
@@ -59,9 +74,20 @@ const AppLayout = () => {
     }
   }, [loading, isAuthenticated, navigate]);
 
+  // Auto-expand trends menu if on a trends sub-route
+  useEffect(() => {
+    if (location.pathname.startsWith('/trends')) {
+      setTrendsOpen(true);
+    }
+  }, [location.pathname]);
+
   const isActive = (href: string) => {
     if (href === '/') return location.pathname === '/';
     return location.pathname.startsWith(href);
+  };
+
+  const isExactActive = (href: string) => {
+    return location.pathname === href;
   };
 
   const handleSignOut = async () => {
@@ -88,6 +114,82 @@ const AppLayout = () => {
       </div>
     );
   }
+
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const active = isActive(item.href);
+    const hasChildren = item.children && item.children.length > 0;
+
+    if (hasChildren) {
+      return (
+        <Collapsible
+          key={item.href}
+          open={trendsOpen && sidebarOpen}
+          onOpenChange={setTrendsOpen}
+        >
+          <CollapsibleTrigger asChild>
+            <button
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="w-5 h-5 shrink-0" />
+              {sidebarOpen && (
+                <>
+                  <span className="font-medium flex-1 text-left">{item.title}</span>
+                  <ChevronDown className={cn("w-4 h-4 transition-transform", trendsOpen && "rotate-180")} />
+                </>
+              )}
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pl-4 mt-1 space-y-1">
+            {item.children?.map((child) => {
+              const ChildIcon = child.icon;
+              const childActive = isExactActive(child.href);
+              return (
+                <Link
+                  key={child.href}
+                  to={child.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  {...preloadOnHover(child.href)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm",
+                    childActive
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <ChildIcon className="w-4 h-4 shrink-0" />
+                  {sidebarOpen && <span className="font-medium">{child.title}</span>}
+                </Link>
+              );
+            })}
+          </CollapsibleContent>
+        </Collapsible>
+      );
+    }
+
+    return (
+      <Link
+        key={item.href}
+        to={item.href}
+        onClick={() => setMobileMenuOpen(false)}
+        {...preloadOnHover(item.href)}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
+          active
+            ? "bg-primary text-primary-foreground shadow-md"
+            : "hover:bg-muted text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <Icon className="w-5 h-5 shrink-0" />
+        {sidebarOpen && <span className="font-medium">{item.title}</span>}
+      </Link>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -138,27 +240,7 @@ const AppLayout = () => {
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {filteredNavItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                {...preloadOnHover(item.href)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
-                  active
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Icon className="w-5 h-5 shrink-0" />
-                {sidebarOpen && <span className="font-medium">{item.title}</span>}
-              </Link>
-            );
-          })}
+          {filteredNavItems.map((item) => renderNavItem(item))}
         </nav>
 
         {/* User Section */}
