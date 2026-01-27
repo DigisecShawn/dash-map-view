@@ -469,7 +469,6 @@ const EnvironmentalTrendsPage = () => {
         envStats={envStats}
         isUsingMockData={isUsingMockData}
         complianceAnalysis={complianceAnalysis}
-        anomalyData={anomalyData}
         currentValues={currentValues}
       />
     </div>

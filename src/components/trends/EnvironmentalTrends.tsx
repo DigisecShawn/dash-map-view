@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Thermometer, Droplets, Wind, Volume2, TrendingUp, Flame, AlertTriangle } from 'lucide-react';
+import { Thermometer, Droplets, Wind, Volume2, TrendingUp, Flame } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, ReferenceLine } from 'recharts';
 
 interface TrendDataPoint {
@@ -31,11 +31,6 @@ interface ComplianceData {
   avgExcess: number;
 }
 
-interface AnomalyData {
-  anomalies: Array<{ type: string; time: string; value: number; threshold: number; device: string }>;
-  riskScore: number;
-  trend: string;
-}
 
 interface CurrentValues {
   pm25: number | null;
@@ -54,7 +49,6 @@ interface EnvironmentalTrendsProps {
     noise: ComplianceData;
     temperature: ComplianceData;
   };
-  anomalyData: AnomalyData;
   currentValues: CurrentValues;
 }
 
@@ -132,7 +126,6 @@ const EnvironmentalTrends = ({
   envStats,
   isUsingMockData,
   complianceAnalysis,
-  anomalyData,
   currentValues,
 }: EnvironmentalTrendsProps) => {
   // Calculate heat index data for each time point
@@ -268,47 +261,6 @@ const EnvironmentalTrends = ({
         })}
       </div>
 
-      {/* Anomaly Detection */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-destructive" />
-            異常偵測
-            <Badge variant="outline" className="text-xs ml-auto">
-              {anomalyData.anomalies.length} 項異常
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            {anomalyData.anomalies.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                目前無異常偵測
-              </div>
-            ) : (
-              anomalyData.anomalies.map((anomaly, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                  <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">
-                      {anomaly.type === 'pm25_spike' && 'PM2.5 飆升'}
-                      {anomaly.type === 'noise_spike' && '噪音超標'}
-                      {anomaly.type === 'temp_high' && '高溫警告'}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {anomaly.device} · {anomaly.time}
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-sm font-bold text-destructive">{anomaly.value}</div>
-                    <div className="text-xs text-muted-foreground">閾值: {anomaly.threshold}</div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Environment Statistics Summary */}
       {envStats && (
