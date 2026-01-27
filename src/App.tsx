@@ -1,16 +1,18 @@
 import { Suspense, lazy, memo } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+
 // Lazy load layout and all pages for code splitting
 const AppLayout = lazy(() => import("@/components/AppLayout"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const MapLoginPage = lazy(() => import("./pages/MapLoginPage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const TrendAnalysisPage = lazy(() => import("./pages/TrendAnalysisPage"));
+const EnvironmentalTrendsPage = lazy(() => import("./pages/EnvironmentalTrendsPage"));
+const AIAlertAnalysisPage = lazy(() => import("./pages/AIAlertAnalysisPage"));
 const MapPage = lazy(() => import("./pages/MapPage"));
 const OrganizationManagementPage = lazy(() => import("./pages/OrganizationManagementPage"));
 const DeviceManagementPage = lazy(() => import("./pages/DeviceManagementPage"));
@@ -57,7 +59,10 @@ const App = () => (
               {/* Pages with navigation layout */}
               <Route element={<AppLayout />}>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/trends" element={<TrendAnalysisPage />} />
+                {/* Trends routes */}
+                <Route path="/trends" element={<Navigate to="/trends/environmental" replace />} />
+                <Route path="/trends/environmental" element={<EnvironmentalTrendsPage />} />
+                <Route path="/trends/alerts" element={<AIAlertAnalysisPage />} />
                 <Route path="/organizations" element={<OrganizationManagementPage />} />
                 <Route path="/devices" element={<DeviceManagementPage />} />
                 <Route path="/notifications" element={<NotificationSettingsPage />} />

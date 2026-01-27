@@ -3,7 +3,9 @@ import { useCallback } from 'react';
 // Lazy import mapping for route preloading
 const routeImports: Record<string, () => Promise<unknown>> = {
   '/': () => import('@/pages/Dashboard'),
-  '/trends': () => import('@/pages/TrendAnalysisPage'),
+  '/trends': () => import('@/pages/EnvironmentalTrendsPage'),
+  '/trends/environmental': () => import('@/pages/EnvironmentalTrendsPage'),
+  '/trends/alerts': () => import('@/pages/AIAlertAnalysisPage'),
   '/organizations': () => import('@/pages/OrganizationManagementPage'),
   '/devices': () => import('@/pages/DeviceManagementPage'),
   '/notifications': () => import('@/pages/NotificationSettingsPage'),
