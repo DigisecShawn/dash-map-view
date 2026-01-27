@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { BarChart3, Monitor, Clock, Building2, MapPin, ChevronRight, Download, Target, ShieldAlert, TrendingUp } from 'lucide-react';
+import { BarChart3, Monitor, Clock, Building2, MapPin, ChevronRight, Download, ShieldAlert, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,7 +11,6 @@ import { useCompanySiteFilter } from '@/hooks/useCompanySiteFilter';
 import { toast } from 'sonner';
 import { getAlertTypeLabel } from '@/lib/alertTypeIcons';
 import TrendAnalysisSkeleton from '@/components/TrendAnalysisSkeleton';
-import DecisionAnalyticsDashboard from '@/components/trends/DecisionAnalyticsDashboard';
 import AIAlertAnalysis from '@/components/trends/AIAlertAnalysis';
 import EnvironmentalTrends from '@/components/trends/EnvironmentalTrends';
 
@@ -156,7 +155,7 @@ const TrendAnalysisPage = () => {
   const [selectedDevice, setSelectedDevice] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<string>('24h');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('decision');
+  const [activeTab, setActiveTab] = useState('trends');
 
   const {
     companies,
@@ -364,8 +363,6 @@ const TrendAnalysisPage = () => {
     }));
   }, [siteAlertDistribution]);
 
-  // ========== Decision Analytics Data ==========
-
   // Environmental Compliance Analysis
   const complianceAnalysis = useMemo(() => {
     if (filteredSensorData.length === 0) {
@@ -431,82 +428,6 @@ const TrendAnalysisPage = () => {
       temperature: latest.temperature,
     };
   }, [filteredSensorData]);
-
-  // Alert Response Efficiency KPIs
-  const alertEfficiencyKPI = useMemo(() => {
-    if (filteredWsAlerts.length === 0) {
-      return {
-        totalAlerts: 28,
-        acknowledgedCount: 22,
-        acknowledgeRate: 78.6,
-        avgResponseTime: 4.2,
-        pendingCritical: 2,
-        pendingWarning: 4,
-        resolvedToday: 8,
-      };
-    }
-    
-    const acknowledged = filteredWsAlerts.filter(a => a.acknowledged);
-    const pending = filteredWsAlerts.filter(a => !a.acknowledged);
-    const pendingCritical = pending.filter(a => a.severity === 'critical' || a.severity === 'error').length;
-    const pendingWarning = pending.filter(a => a.severity === 'warning').length;
-    const avgResponseTime = 4.5 + Math.random() * 2;
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const resolvedToday = acknowledged.filter(a => new Date(a.created_at) >= today).length;
-    
-    return {
-      totalAlerts: filteredWsAlerts.length,
-      acknowledgedCount: acknowledged.length,
-      acknowledgeRate: filteredWsAlerts.length > 0 
-        ? Math.round((acknowledged.length / filteredWsAlerts.length) * 1000) / 10 
-        : 0,
-      avgResponseTime: Math.round(avgResponseTime * 10) / 10,
-      pendingCritical,
-      pendingWarning,
-      resolvedToday,
-    };
-  }, [filteredWsAlerts]);
-
-  // Hourly Heatmap Data for alerts
-  const hourlyHeatmapData = useMemo(() => {
-    const hourCounts: Record<number, Record<string, number>> = {};
-    
-    for (let h = 0; h < 24; h++) {
-      hourCounts[h] = { warning: 0, error: 0, critical: 0, total: 0 };
-    }
-    
-    if (filteredWsAlerts.length === 0) {
-      for (let h = 0; h < 24; h++) {
-        const baseCount = h >= 8 && h <= 18 ? 3 : 1;
-        hourCounts[h] = {
-          warning: Math.floor(Math.random() * baseCount * 2),
-          error: Math.floor(Math.random() * baseCount),
-          critical: Math.floor(Math.random() * (baseCount / 2)),
-          total: 0,
-        };
-        hourCounts[h].total = hourCounts[h].warning + hourCounts[h].error + hourCounts[h].critical;
-      }
-    } else {
-      filteredWsAlerts.forEach(alert => {
-        const hour = new Date(alert.created_at).getHours();
-        if (hourCounts[hour]) {
-          hourCounts[hour][alert.severity] = (hourCounts[hour][alert.severity] || 0) + 1;
-          hourCounts[hour].total++;
-        }
-      });
-    }
-    
-    return Object.entries(hourCounts).map(([hour, counts]) => ({
-      hour: `${String(hour).padStart(2, '0')}:00`,
-      hourNum: parseInt(hour),
-      warning: counts.warning,
-      error: counts.error,
-      critical: counts.critical,
-      total: counts.total,
-    }));
-  }, [filteredWsAlerts]);
 
   // Environmental Anomaly Detection
   const anomalyData = useMemo(() => {
@@ -754,32 +675,27 @@ const TrendAnalysisPage = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="decision" className="flex items-center gap-2">
-            <Target className="w-4 h-4" />
-            <span className="hidden sm:inline">決策分析儀表板</span>
-            <span className="sm:hidden">決策分析</span>
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="trends" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            <span className="hidden sm:inline">環境趨勢分析</span>
+            <span className="sm:hidden">環境趨勢</span>
           </TabsTrigger>
           <TabsTrigger value="alerts" className="flex items-center gap-2">
             <ShieldAlert className="w-4 h-4" />
             <span className="hidden sm:inline">AI偵測警報分析</span>
             <span className="sm:hidden">警報分析</span>
           </TabsTrigger>
-          <TabsTrigger value="trends" className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            <span className="hidden sm:inline">環境趨勢分析</span>
-            <span className="sm:hidden">環境趨勢</span>
-          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="decision">
-          <DecisionAnalyticsDashboard
+        <TabsContent value="trends">
+          <EnvironmentalTrends
+            trendData={trendData}
+            envStats={envStats}
+            isUsingMockData={isUsingMockData}
             complianceAnalysis={complianceAnalysis}
-            alertEfficiencyKPI={alertEfficiencyKPI}
             anomalyData={anomalyData}
             currentValues={currentValues}
-            isUsingMockData={isUsingMockData}
-            isUsingMockAlerts={isUsingMockAlerts}
           />
         </TabsContent>
 
@@ -791,14 +707,6 @@ const TrendAnalysisPage = () => {
             siteAlertDistribution={siteAlertDistribution}
             sitePieData={sitePieData}
             isUsingMockAlerts={isUsingMockAlerts}
-          />
-        </TabsContent>
-
-        <TabsContent value="trends">
-          <EnvironmentalTrends
-            trendData={trendData}
-            envStats={envStats}
-            isUsingMockData={isUsingMockData}
           />
         </TabsContent>
       </Tabs>

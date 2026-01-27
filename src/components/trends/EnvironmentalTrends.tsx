@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Thermometer, Droplets, Wind, Volume2, Sun, TrendingUp, Flame } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Thermometer, Droplets, Wind, Volume2, TrendingUp, Flame, AlertTriangle } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, ReferenceLine } from 'recharts';
 
 interface TrendDataPoint {
@@ -23,11 +24,66 @@ interface EnvStats {
   dataCount: number;
 }
 
+interface ComplianceData {
+  total: number;
+  exceeded: number;
+  rate: number;
+  avgExcess: number;
+}
+
+interface AnomalyData {
+  anomalies: Array<{ type: string; time: string; value: number; threshold: number; device: string }>;
+  riskScore: number;
+  trend: string;
+}
+
+interface CurrentValues {
+  pm25: number | null;
+  pm10: number | null;
+  noise: number | null;
+  temperature: number | null;
+}
+
 interface EnvironmentalTrendsProps {
   trendData: TrendDataPoint[];
   envStats: EnvStats | null;
   isUsingMockData: boolean;
+  complianceAnalysis: {
+    pm25: ComplianceData;
+    pm10: ComplianceData;
+    noise: ComplianceData;
+    temperature: ComplianceData;
+  };
+  anomalyData: AnomalyData;
+  currentValues: CurrentValues;
 }
+
+const COMPLIANCE_THRESHOLDS = {
+  pm25: { warning: 25, critical: 35, emergency: 55, unit: 'µg/m³', name: 'PM2.5' },
+  pm10: { warning: 100, critical: 125, emergency: 200, unit: 'µg/m³', name: 'PM10' },
+  noise: { warning: 60, critical: 65, emergency: 70, unit: 'dB', name: '噪音（日間住宅）' },
+  temperature: { min: 15, max: 35, unit: '°C', name: '溫度' },
+};
+
+// Get level label for current value
+const getCurrentLevel = (key: string, value: number | null): { level: string; color: string } => {
+  if (value === null) return { level: '無數據', color: 'text-muted-foreground' };
+  
+  const threshold = COMPLIANCE_THRESHOLDS[key as keyof typeof COMPLIANCE_THRESHOLDS];
+  
+  if ('min' in threshold) {
+    // Temperature range check
+    if (value < threshold.min) return { level: '過低', color: 'text-sky-500' };
+    if (value > threshold.max) return { level: '過高', color: 'text-destructive' };
+    return { level: '正常', color: 'text-emerald-500' };
+  }
+  
+  // For PM2.5, PM10, noise with warning/critical/emergency levels
+  if (value <= threshold.warning) return { level: '正常', color: 'text-emerald-500' };
+  if (value <= threshold.critical) return { level: '警告', color: 'text-amber-500' };
+  if (value <= threshold.emergency) return { level: '嚴重', color: 'text-orange-500' };
+  return { level: '緊急', color: 'text-destructive' };
+};
 
 // Heat Index calculation based on temperature (°C) and relative humidity (%)
 // Using simplified Rothfusz regression equation
@@ -75,6 +131,9 @@ const EnvironmentalTrends = ({
   trendData,
   envStats,
   isUsingMockData,
+  complianceAnalysis,
+  anomalyData,
+  currentValues,
 }: EnvironmentalTrendsProps) => {
   // Calculate heat index data for each time point
   const heatIndexData = useMemo(() => {
@@ -137,6 +196,119 @@ const EnvironmentalTrends = ({
           </Badge>
         )}
       </h2>
+
+      {/* Compliance Analysis Cards */}
+      <div className="grid md:grid-cols-4 gap-4">
+        {Object.entries(complianceAnalysis).map(([key, data]) => {
+          const threshold = COMPLIANCE_THRESHOLDS[key as keyof typeof COMPLIANCE_THRESHOLDS];
+          const isGood = data.rate >= 90;
+          const isWarning = data.rate >= 70 && data.rate < 90;
+          const isCritical = data.rate >= 50 && data.rate < 70;
+          
+          // Get current value for this metric
+          const currentValue = currentValues[key as keyof typeof currentValues];
+          const currentLevel = getCurrentLevel(key, currentValue);
+          
+          // Determine progress bar variant based on compliance rate
+          const getProgressVariant = () => {
+            if (data.rate >= 90) return 'success';
+            if (data.rate >= 70) return 'warning';
+            if (data.rate >= 50) return 'critical';
+            return 'emergency';
+          };
+          
+          return (
+            <Card key={key} className="border-l-4" style={{
+              borderLeftColor: isGood ? 'hsl(142, 71%, 45%)' : 
+                              isWarning ? 'hsl(45, 93%, 47%)' : 
+                              isCritical ? 'hsl(24, 95%, 53%)' :
+                              'hsl(var(--destructive))',
+            }}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">{threshold.name}</span>
+                  <Badge variant={isGood ? 'outline' : isWarning ? 'secondary' : 'destructive'} className="text-xs">
+                    {isGood ? '合規' : isWarning ? '警告' : isCritical ? '嚴重' : '緊急'}
+                  </Badge>
+                </div>
+                
+                {/* Current Value Display */}
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-2xl font-bold">
+                    {currentValue !== null ? currentValue : '--'}
+                  </span>
+                  <span className="text-sm text-muted-foreground">{threshold.unit}</span>
+                  <Badge variant="outline" className={`text-xs ml-auto ${currentLevel.color}`}>
+                    {currentLevel.level}
+                  </Badge>
+                </div>
+                
+                {/* Compliance Rate */}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs text-muted-foreground">合規率</span>
+                  <span className="text-lg font-semibold">{data.rate}%</span>
+                </div>
+                <Progress 
+                  value={data.rate} 
+                  variant={getProgressVariant()}
+                  className="h-2 mb-2"
+                />
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  <div>
+                    {'warning' in threshold 
+                      ? `警告: ${threshold.warning}, 嚴重: ${threshold.critical}, 緊急: >${threshold.emergency}` 
+                      : `${threshold.min}-${threshold.max}`} {threshold.unit}
+                  </div>
+                  <div>超標: {data.exceeded}/{data.total} 次</div>
+                  {data.avgExcess > 0 && <div className="text-destructive">平均超標: +{data.avgExcess} {threshold.unit}</div>}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Anomaly Detection */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-destructive" />
+            異常偵測
+            <Badge variant="outline" className="text-xs ml-auto">
+              {anomalyData.anomalies.length} 項異常
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {anomalyData.anomalies.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                目前無異常偵測
+              </div>
+            ) : (
+              anomalyData.anomalies.map((anomaly, idx) => (
+                <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">
+                      {anomaly.type === 'pm25_spike' && 'PM2.5 飆升'}
+                      {anomaly.type === 'noise_spike' && '噪音超標'}
+                      {anomaly.type === 'temp_high' && '高溫警告'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {anomaly.device} · {anomaly.time}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-bold text-destructive">{anomaly.value}</div>
+                    <div className="text-xs text-muted-foreground">閾值: {anomaly.threshold}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Environment Statistics Summary */}
       {envStats && (
@@ -399,23 +571,13 @@ const EnvironmentalTrends = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-56">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
-                  <defs>
-                    <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="humidGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis yAxisId="temp" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="°C" orientation="left" />
-                  <YAxis yAxisId="humid" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="%" orientation="right" />
+                  <YAxis yAxisId="temp" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="°C" />
+                  <YAxis yAxisId="humid" orientation="right" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="%" />
                   <Tooltip 
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
@@ -428,15 +590,15 @@ const EnvironmentalTrends = ({
                       return [value, name];
                     }} 
                   />
-                  <Area yAxisId="temp" type="monotone" dataKey="temperature" stroke="#ef4444" fill="url(#tempGradient)" strokeWidth={2} name="temperature" />
-                  <Area yAxisId="humid" type="monotone" dataKey="humidity" stroke="#0ea5e9" fill="url(#humidGradient)" strokeWidth={2} name="humidity" />
-                </AreaChart>
+                  <Line yAxisId="temp" type="monotone" dataKey="temperature" stroke="#ef4444" strokeWidth={2} dot={{ fill: '#ef4444', r: 2 }} name="temperature" />
+                  <Line yAxisId="humid" type="monotone" dataKey="humidity" stroke="#0ea5e9" strokeWidth={2} dot={{ fill: '#0ea5e9', r: 2 }} name="humidity" />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Air Quality Chart */}
+        {/* PM2.5 & PM10 Chart */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -455,7 +617,7 @@ const EnvironmentalTrends = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-56">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData}>
                   <defs>
@@ -470,7 +632,7 @@ const EnvironmentalTrends = ({
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="μg/m³" />
+                  <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="µg" />
                   <Tooltip 
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
@@ -478,15 +640,13 @@ const EnvironmentalTrends = ({
                       borderRadius: '8px',
                     }} 
                     formatter={(value: number, name: string) => {
-                      const labels: Record<string, string> = {
-                        pm25: 'PM2.5',
-                        pm10: 'PM10',
-                      };
-                      return [`${value} μg/m³`, labels[name] || name];
+                      if (name === 'pm25') return [`${value} µg/m³`, 'PM2.5'];
+                      if (name === 'pm10') return [`${value} µg/m³`, 'PM10'];
+                      return [value, name];
                     }} 
                   />
-                  <Area type="monotone" dataKey="pm25" stroke="#8b5cf6" fill="url(#pm25Gradient)" strokeWidth={2} name="pm25" />
-                  <Area type="monotone" dataKey="pm10" stroke="#d97706" fill="url(#pm10Gradient)" strokeWidth={2} name="pm10" />
+                  <Area type="monotone" dataKey="pm25" stroke="#8b5cf6" strokeWidth={2} fill="url(#pm25Gradient)" name="pm25" />
+                  <Area type="monotone" dataKey="pm10" stroke="#d97706" strokeWidth={2} fill="url(#pm10Gradient)" name="pm10" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -502,7 +662,7 @@ const EnvironmentalTrends = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-56">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData}>
                   <defs>
@@ -522,7 +682,8 @@ const EnvironmentalTrends = ({
                     }} 
                     formatter={(value: number) => [`${value} dB`, '噪音']} 
                   />
-                  <Area type="monotone" dataKey="noise" stroke="#64748b" fill="url(#noiseGradient)" strokeWidth={2} />
+                  <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="3 3" label={{ value: '70dB 限值', position: 'right', fontSize: 10, fill: '#ef4444' }} />
+                  <Area type="monotone" dataKey="noise" stroke="#64748b" strokeWidth={2} fill="url(#noiseGradient)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -533,12 +694,15 @@ const EnvironmentalTrends = ({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <Sun className="w-4 h-4 text-amber-500" />
-              太陽能發電趨勢
+              <svg className="w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+              </svg>
+              太陽能功率趨勢
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-56">
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData}>
                   <defs>
@@ -558,7 +722,7 @@ const EnvironmentalTrends = ({
                     }} 
                     formatter={(value: number) => [`${value} W`, '太陽能功率']} 
                   />
-                  <Area type="monotone" dataKey="solar" stroke="#f59e0b" fill="url(#solarGradient)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="solar" stroke="#f59e0b" strokeWidth={2} fill="url(#solarGradient)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
