@@ -432,84 +432,6 @@ const TrendAnalysisPage = () => {
     };
   }, [filteredSensorData]);
 
-  // Calculate compliance history over time periods
-  const complianceHistory = useMemo(() => {
-    const is7Days = timeRange === '7d';
-    const periods = is7Days ? 7 : 6; // 7 days or 6 time periods
-    
-    if (filteredSensorData.length === 0) {
-      // Generate mock history data
-      const mockHistory = Array.from({ length: periods }, (_, i) => {
-        const date = new Date();
-        if (is7Days) {
-          date.setDate(date.getDate() - (periods - 1 - i));
-        } else {
-          date.setHours(date.getHours() - (periods - 1 - i) * 4);
-        }
-        const timeLabel = is7Days 
-          ? date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
-          : date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-        return { time: timeLabel, baseRate: 85 + Math.random() * 12 };
-      });
-      
-      return {
-        pm25: mockHistory.map(h => ({ time: h.time, rate: Math.round(h.baseRate + Math.random() * 5) })),
-        pm10: mockHistory.map(h => ({ time: h.time, rate: Math.round(h.baseRate + Math.random() * 8) })),
-        noise: mockHistory.map(h => ({ time: h.time, rate: Math.round(h.baseRate - 5 + Math.random() * 10) })),
-        temperature: mockHistory.map(h => ({ time: h.time, rate: Math.round(h.baseRate + Math.random() * 7) })),
-      };
-    }
-    
-    // Group data by time periods
-    const periodDuration = is7Days ? 24 * 60 * 60 * 1000 : 4 * 60 * 60 * 1000;
-    const now = Date.now();
-    
-    const groupedData: Record<number, typeof filteredSensorData> = {};
-    filteredSensorData.forEach(d => {
-      const recordTime = new Date(d.recorded_at).getTime();
-      const periodIndex = Math.floor((now - recordTime) / periodDuration);
-      if (periodIndex >= 0 && periodIndex < periods) {
-        if (!groupedData[periodIndex]) groupedData[periodIndex] = [];
-        groupedData[periodIndex].push(d);
-      }
-    });
-    
-    const analyzeGroup = (data: typeof filteredSensorData, getValue: (d: typeof filteredSensorData[0]) => number | null, threshold: number, isRange?: { min: number; max: number }) => {
-      const values = data.map(getValue).filter(v => v !== null) as number[];
-      if (values.length === 0) return 100;
-      let exceeded: number[];
-      if (isRange) {
-        exceeded = values.filter(v => v < isRange.min || v > isRange.max);
-      } else {
-        exceeded = values.filter(v => v > threshold);
-      }
-      return Math.round((1 - exceeded.length / values.length) * 100);
-    };
-    
-    const result = {
-      pm25: [] as { time: string; rate: number }[],
-      pm10: [] as { time: string; rate: number }[],
-      noise: [] as { time: string; rate: number }[],
-      temperature: [] as { time: string; rate: number }[],
-    };
-    
-    for (let i = periods - 1; i >= 0; i--) {
-      const date = new Date(now - i * periodDuration);
-      const timeLabel = is7Days 
-        ? date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
-        : date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-      
-      const groupData = groupedData[i] || [];
-      
-      result.pm25.push({ time: timeLabel, rate: groupData.length > 0 ? analyzeGroup(groupData, d => d.pm25, 35) : 100 });
-      result.pm10.push({ time: timeLabel, rate: groupData.length > 0 ? analyzeGroup(groupData, d => d.pm10, 125) : 100 });
-      result.noise.push({ time: timeLabel, rate: groupData.length > 0 ? analyzeGroup(groupData, d => d.noise, 70) : 100 });
-      result.temperature.push({ time: timeLabel, rate: groupData.length > 0 ? analyzeGroup(groupData, d => d.temperature, 0, { min: 15, max: 35 }) : 100 });
-    }
-    
-    return result;
-  }, [filteredSensorData, timeRange]);
-
   // Alert Response Efficiency KPIs
   const alertEfficiencyKPI = useMemo(() => {
     if (filteredWsAlerts.length === 0) {
@@ -856,7 +778,6 @@ const TrendAnalysisPage = () => {
             alertEfficiencyKPI={alertEfficiencyKPI}
             anomalyData={anomalyData}
             currentValues={currentValues}
-            complianceHistory={complianceHistory}
             isUsingMockData={isUsingMockData}
             isUsingMockAlerts={isUsingMockAlerts}
           />
