@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Target, CheckCircle2, XCircle, Timer, Gauge, Activity, Zap, AlertTriangle } from 'lucide-react';
+import { Target, CheckCircle2, XCircle, Timer, Gauge, Activity, Zap, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 interface ComplianceData {
   total: number;
@@ -33,6 +34,18 @@ interface CurrentValues {
   temperature: number | null;
 }
 
+interface ComplianceHistoryPoint {
+  time: string;
+  rate: number;
+}
+
+interface ComplianceHistory {
+  pm25: ComplianceHistoryPoint[];
+  pm10: ComplianceHistoryPoint[];
+  noise: ComplianceHistoryPoint[];
+  temperature: ComplianceHistoryPoint[];
+}
+
 interface DecisionAnalyticsDashboardProps {
   complianceAnalysis: {
     pm25: ComplianceData;
@@ -43,6 +56,7 @@ interface DecisionAnalyticsDashboardProps {
   alertEfficiencyKPI: AlertEfficiencyKPI;
   anomalyData: AnomalyData;
   currentValues: CurrentValues;
+  complianceHistory: ComplianceHistory;
   isUsingMockData: boolean;
   isUsingMockAlerts: boolean;
 }
@@ -74,11 +88,25 @@ const getCurrentLevel = (key: string, value: number | null): { level: string; co
   return { level: '緊急', color: 'text-destructive' };
 };
 
+// Get trend direction from history data
+const getTrendDirection = (history: ComplianceHistoryPoint[]) => {
+  if (history.length < 2) return 'stable';
+  const recent = history.slice(-3);
+  if (recent.length < 2) return 'stable';
+  const first = recent[0].rate;
+  const last = recent[recent.length - 1].rate;
+  const diff = last - first;
+  if (diff > 3) return 'up';
+  if (diff < -3) return 'down';
+  return 'stable';
+};
+
 const DecisionAnalyticsDashboard = ({
   complianceAnalysis,
   alertEfficiencyKPI,
   anomalyData,
   currentValues,
+  complianceHistory,
   isUsingMockData,
   isUsingMockAlerts,
 }: DecisionAnalyticsDashboardProps) => {
@@ -203,6 +231,10 @@ const DecisionAnalyticsDashboard = ({
           const currentValue = currentValues[key as keyof typeof currentValues];
           const currentLevel = getCurrentLevel(key, currentValue);
           
+          // Get history for sparkline
+          const history = complianceHistory[key as keyof typeof complianceHistory] || [];
+          const trend = getTrendDirection(history);
+          
           // Determine progress bar variant based on compliance rate
           const getProgressVariant = () => {
             if (data.rate >= 90) return 'success';
@@ -211,12 +243,15 @@ const DecisionAnalyticsDashboard = ({
             return 'emergency';
           };
           
+          // Get sparkline color based on current rate
+          const sparklineColor = isGood ? 'hsl(142, 71%, 45%)' : 
+                                isWarning ? 'hsl(45, 93%, 47%)' : 
+                                isCritical ? 'hsl(24, 95%, 53%)' :
+                                'hsl(var(--destructive))';
+          
           return (
             <Card key={key} className="border-l-4" style={{
-              borderLeftColor: isGood ? 'hsl(142, 71%, 45%)' : 
-                              isWarning ? 'hsl(45, 93%, 47%)' : 
-                              isCritical ? 'hsl(24, 95%, 53%)' :
-                              'hsl(var(--destructive))',
+              borderLeftColor: sparklineColor,
             }}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -237,10 +272,37 @@ const DecisionAnalyticsDashboard = ({
                   </Badge>
                 </div>
                 
-                {/* Compliance Rate */}
+                {/* Mini Sparkline Chart */}
+                {history.length > 1 && (
+                  <div className="h-10 mb-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={history} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id={`gradient-${key}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={sparklineColor} stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor={sparklineColor} stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <Area 
+                          type="monotone" 
+                          dataKey="rate" 
+                          stroke={sparklineColor} 
+                          strokeWidth={1.5}
+                          fill={`url(#gradient-${key})`}
+                          dot={false}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+                
+                {/* Compliance Rate with Trend */}
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs text-muted-foreground">合規率</span>
                   <span className="text-lg font-semibold">{data.rate}%</span>
+                  {trend === 'up' && <TrendingUp className="w-4 h-4 text-emerald-500" />}
+                  {trend === 'down' && <TrendingDown className="w-4 h-4 text-destructive" />}
+                  {trend === 'stable' && <Minus className="w-4 h-4 text-muted-foreground" />}
                 </div>
                 <Progress 
                   value={data.rate} 
