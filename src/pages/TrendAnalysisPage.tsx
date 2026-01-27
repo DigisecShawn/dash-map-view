@@ -756,7 +756,6 @@ const TrendAnalysisPage = () => {
             complianceAnalysis={complianceAnalysis}
             alertEfficiencyKPI={alertEfficiencyKPI}
             anomalyData={anomalyData}
-            hourlyHeatmapData={hourlyHeatmapData}
             isUsingMockData={isUsingMockData}
             isUsingMockAlerts={isUsingMockAlerts}
           />
