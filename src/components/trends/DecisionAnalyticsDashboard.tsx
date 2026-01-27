@@ -26,6 +26,13 @@ interface AnomalyData {
   trend: string;
 }
 
+interface CurrentValues {
+  pm25: number | null;
+  pm10: number | null;
+  noise: number | null;
+  temperature: number | null;
+}
+
 interface DecisionAnalyticsDashboardProps {
   complianceAnalysis: {
     pm25: ComplianceData;
@@ -35,6 +42,7 @@ interface DecisionAnalyticsDashboardProps {
   };
   alertEfficiencyKPI: AlertEfficiencyKPI;
   anomalyData: AnomalyData;
+  currentValues: CurrentValues;
   isUsingMockData: boolean;
   isUsingMockAlerts: boolean;
 }
@@ -46,11 +54,31 @@ const COMPLIANCE_THRESHOLDS = {
   temperature: { min: 15, max: 35, unit: '°C', name: '溫度' },
 };
 
+// Get level label for current value
+const getCurrentLevel = (key: string, value: number | null): { level: string; color: string } => {
+  if (value === null) return { level: '無數據', color: 'text-muted-foreground' };
+  
+  const threshold = COMPLIANCE_THRESHOLDS[key as keyof typeof COMPLIANCE_THRESHOLDS];
+  
+  if ('min' in threshold) {
+    // Temperature range check
+    if (value < threshold.min) return { level: '過低', color: 'text-sky-500' };
+    if (value > threshold.max) return { level: '過高', color: 'text-destructive' };
+    return { level: '正常', color: 'text-emerald-500' };
+  }
+  
+  // For PM2.5, PM10, noise with warning/critical/emergency levels
+  if (value <= threshold.warning) return { level: '正常', color: 'text-emerald-500' };
+  if (value <= threshold.critical) return { level: '警告', color: 'text-amber-500' };
+  if (value <= threshold.emergency) return { level: '嚴重', color: 'text-orange-500' };
+  return { level: '緊急', color: 'text-destructive' };
+};
 
 const DecisionAnalyticsDashboard = ({
   complianceAnalysis,
   alertEfficiencyKPI,
   anomalyData,
+  currentValues,
   isUsingMockData,
   isUsingMockAlerts,
 }: DecisionAnalyticsDashboardProps) => {
@@ -171,6 +199,10 @@ const DecisionAnalyticsDashboard = ({
           const isWarning = data.rate >= 70 && data.rate < 90;
           const isCritical = data.rate >= 50 && data.rate < 70;
           
+          // Get current value for this metric
+          const currentValue = currentValues[key as keyof typeof currentValues];
+          const currentLevel = getCurrentLevel(key, currentValue);
+          
           // Determine progress bar variant based on compliance rate
           const getProgressVariant = () => {
             if (data.rate >= 90) return 'success';
@@ -193,7 +225,23 @@ const DecisionAnalyticsDashboard = ({
                     {isGood ? '合規' : isWarning ? '警告' : isCritical ? '嚴重' : '緊急'}
                   </Badge>
                 </div>
-                <div className="text-3xl font-bold mb-1">{data.rate}%</div>
+                
+                {/* Current Value Display */}
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-2xl font-bold">
+                    {currentValue !== null ? currentValue : '--'}
+                  </span>
+                  <span className="text-sm text-muted-foreground">{threshold.unit}</span>
+                  <Badge variant="outline" className={`text-xs ml-auto ${currentLevel.color}`}>
+                    {currentLevel.level}
+                  </Badge>
+                </div>
+                
+                {/* Compliance Rate */}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs text-muted-foreground">合規率</span>
+                  <span className="text-lg font-semibold">{data.rate}%</span>
+                </div>
                 <Progress 
                   value={data.rate} 
                   variant={getProgressVariant()}

@@ -411,6 +411,27 @@ const TrendAnalysisPage = () => {
     };
   }, [filteredSensorData]);
 
+  // Get current (latest) sensor values
+  const currentValues = useMemo(() => {
+    if (filteredSensorData.length === 0) {
+      // Mock data when no real data
+      return {
+        pm25: 28,
+        pm10: 85,
+        noise: 58,
+        temperature: 26.5,
+      };
+    }
+    
+    const latest = filteredSensorData[filteredSensorData.length - 1];
+    return {
+      pm25: latest.pm25,
+      pm10: latest.pm10,
+      noise: latest.noise,
+      temperature: latest.temperature,
+    };
+  }, [filteredSensorData]);
+
   // Alert Response Efficiency KPIs
   const alertEfficiencyKPI = useMemo(() => {
     if (filteredWsAlerts.length === 0) {
@@ -756,6 +777,7 @@ const TrendAnalysisPage = () => {
             complianceAnalysis={complianceAnalysis}
             alertEfficiencyKPI={alertEfficiencyKPI}
             anomalyData={anomalyData}
+            currentValues={currentValues}
             isUsingMockData={isUsingMockData}
             isUsingMockAlerts={isUsingMockAlerts}
           />
